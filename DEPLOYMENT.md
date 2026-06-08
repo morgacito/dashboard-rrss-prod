@@ -20,7 +20,7 @@ Antes de iniciar el despliegue, asegúrese de tener configurados los siguientes 
   * `gd` (requerida por PhpSpreadsheet para la manipulación de imágenes/gráficos).
   * `xml` / `dom` / `xmlwriter` (requeridas por PHPWord).
   * `mbstring` (para manejo de codificaciones multibyte).
-* **Composer** instalado globalmente en el sistema.
+* **Composer** (Opcional; las dependencias de la carpeta `vendor/` vienen pre-instaladas y listas en el release de producción para facilitar el despliegue en hosting sin consola).
 
 ### Entorno de Compilación Frontend
 * **Node.js 18+** y **pnpm** (recomendado por seguridad y velocidad) o **npm** (solo necesarios en la máquina de desarrollo o build server para compilar el frontend).
@@ -52,13 +52,13 @@ Antes de iniciar el despliegue, asegúrese de tener configurados los siguientes 
 
 ## 3. Despliegue del Backend (PHP 8.4)
 
-### Paso A: Copia de archivos e Instalación de dependencias
+### Paso A: Copia de archivos y Dependencias
 1. Copie el contenido del directorio `backend/` al directorio público de su servidor web (por ejemplo, `/var/www/html/api/` o directamente a la raíz de un subdominio, p. ej., `/var/www/html/backend/`).
-2. Acceda al directorio del backend y ejecute Composer para instalar las dependencias de producción, omitiendo las de desarrollo y optimizando el cargador de clases:
-   ```bash
-   cd /var/www/html/backend
-   composer install --no-dev --optimize-autoloader
-   ```
+2. **Instalación de Dependencias**:
+   > [!NOTE]
+   > Las dependencias de PHP (ubicadas en `backend/vendor/`) ya se encuentran pre-instaladas y optimizadas dentro del repositorio de despliegue de producción. **No es necesario ejecutar `composer install` ni ninguna consola en el servidor.**
+   > 
+   > Si en el futuro necesita actualizar estas dependencias desde su máquina de desarrollo antes de generar un nuevo release, simplemente ejecute `composer install --no-dev --optimize-autoloader` antes de correr el script `publish.ps1`.
 
 ### Paso B: Configuración de Variables de Entorno
 La aplicación de PHP obtiene las variables de entorno mediante la función `getenv()`. 
