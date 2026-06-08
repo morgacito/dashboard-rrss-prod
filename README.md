@@ -1,4 +1,4 @@
-﻿# Social Dashboard - Produccion
+# Social Dashboard - Produccion
 
 Este repositorio contiene la version compilada y lista para produccion de **Social Dashboard**.
 

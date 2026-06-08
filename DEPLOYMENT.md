@@ -1,184 +1,156 @@
-# Guía de Despliegue en Producción (Sin Docker) - Social Dashboard
+# Guía de Despliegue en Producción — Social Dashboard
 
-Esta guía detalla los pasos para instalar, configurar y desplegar la aplicación **Social Dashboard (Campaña Mogul 360 V1)** en servidores web tradicionales utilizando una infraestructura basada en **PHP 8.4**, **MariaDB 10.5** (o superior) y un servidor web (como **Apache** o **Nginx**).
-
----
-
-## 1. Requisitos del Sistema
-
-Antes de iniciar el despliegue, asegúrese de tener configurados los siguientes componentes en el servidor:
-
-### Servidor de Base de Datos
-* **MariaDB 10.5+** o **MySQL 8.0+**
-* Acceso de administrador para la creación de esquemas y usuarios.
-
-### Servidor Web y Entorno PHP
-* **Apache** con el módulo `mod_rewrite` habilitado (o Nginx).
-* **PHP 8.4** o superior con las siguientes extensiones instaladas y habilitadas:
-  * `pdo_mysql` (para la conexión a base de datos).
-  * `zip` (requerida por PHPWord y PhpSpreadsheet).
-  * `gd` (requerida por PhpSpreadsheet para la manipulación de imágenes/gráficos).
-  * `xml` / `dom` / `xmlwriter` (requeridas por PHPWord).
-  * `mbstring` (para manejo de codificaciones multibyte).
-* **Composer** (Opcional; las dependencias de la carpeta `vendor/` vienen pre-instaladas y listas en el release de producción para facilitar el despliegue en hosting sin consola).
-
-### Entorno de Compilación Frontend
-* **Node.js 18+** y **pnpm** (recomendado por seguridad y velocidad) o **npm** (solo necesarios en la máquina de desarrollo o build server para compilar el frontend).
+> Esta guía está dirigida al equipo de IT que recibe el paquete de release
+> y lo instala en el servidor de producción.
+> **No se requiere consola, Node.js ni Composer.** Todo se realiza via
+> panel de control de hosting (cPanel, Plesk o similar), FTP y phpMyAdmin.
 
 ---
 
-## 2. Configuración de la Base de Datos
+## Requisitos del servidor
 
-1. Acceda a la consola de MariaDB/MySQL:
-   ```bash
-   mysql -u root -p
-   ```
+| Componente | Versión mínima |
+|---|---|
+| PHP | 8.4 |
+| MariaDB / MySQL | 10.5 / 8.0 |
+| Servidor web | Apache (con `mod_rewrite` habilitado) |
+| Extensiones PHP requeridas | `pdo_mysql`, `zip`, `gd`, `xml`, `dom`, `xmlwriter`, `mbstring` |
 
-2. Cree la base de datos de producción y un usuario dedicado con privilegios adecuados:
-   ```sql
-   CREATE DATABASE social_dashboard CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   
-   CREATE USER 'dashboard_user'@'localhost' IDENTIFIED BY 'mi_contraseña_segura';
-   GRANT ALL PRIVILEGES ON social_dashboard.* TO 'dashboard_user'@'localhost';
-   FLUSH PRIVILEGES;
-   ```
-
-3. Importe la estructura inicial de tablas desde el archivo [schema.sql](file:///C:/dockerapps/Social%20Dashboard/backend/schema.sql) del repositorio:
-   ```bash
-   mysql -u dashboard_user -p social_dashboard < /ruta/al/proyecto/backend/schema.sql
-   ```
+> Si no sabe si estas extensiones están activas, consulte con su proveedor
+> de hosting o verifícelas desde el panel de control en la sección PHP.
 
 ---
 
-## 3. Despliegue del Backend (PHP 8.4)
+## Estructura del paquete de release
 
-### Paso A: Copia de archivos y Dependencias
-1. Copie el contenido del directorio `backend/` al directorio público de su servidor web (por ejemplo, `/var/www/html/api/` o directamente a la raíz de un subdominio, p. ej., `/var/www/html/backend/`).
-2. **Instalación de Dependencias**:
-   > [!NOTE]
-   > Las dependencias de PHP (ubicadas en `backend/vendor/`) ya se encuentran pre-instaladas y optimizadas dentro del repositorio de despliegue de producción. **No es necesario ejecutar `composer install` ni ninguna consola en el servidor.**
-   > 
-   > Si en el futuro necesita actualizar estas dependencias desde su máquina de desarrollo antes de generar un nuevo release, simplemente ejecute `composer install --no-dev --optimize-autoloader` antes de correr el script `publish.ps1`.
-
-### Paso B: Configuración de Variables de Entorno
-La aplicación de PHP obtiene las variables de entorno mediante la función `getenv()`. 
-
-#### Detalle de las Variables de Entorno a Configurar:
-
-| Variable | Descripción | Valor Sugerido / Ejemplo |
-| :--- | :--- | :--- |
-| `DB_HOST` | Host o dirección IP del servidor de base de datos MariaDB. | `127.0.0.1` |
-| `DB_NAME` | Nombre de la base de datos MariaDB creada para el dashboard. | `social_dashboard` |
-| `DB_USER` | Usuario de la base de datos con privilegios adecuados. | `dashboard_user` |
-| `DB_PASSWORD` | Contraseña correspondiente al usuario de la base de datos. | *Contraseña segura elegida* |
-| `UPLOAD_PASSWORD` | Contraseña requerida en la cabecera `X-Upload-Password` para autorizar la carga de archivos Excel en `/api/upload`. | `mogul360secret` |
-
-> [!TIP]
-> Se sugiere configurar `UPLOAD_PASSWORD` con el valor `"mogul360secret"` para mantener la coherencia con la clave por defecto del sistema.
-
-Hay dos formas recomendadas de definir estas variables en producción sin Docker:
-
-#### Opción 1: A nivel del Servidor Web Apache (Recomendado por seguridad)
-Defina las variables de entorno en el archivo de configuración del **VirtualHost** de Apache o en un archivo `.htaccess` en el directorio raíz del backend:
-
-Si utiliza un **VirtualHost**, añada las siguientes directivas `SetEnv`:
-```apache
-<VirtualHost *:8000>
-    DocumentRoot "/var/www/html/backend"
-    ServerName api.socialdashboard.local
-
-    SetEnv DB_HOST 127.0.0.1
-    SetEnv DB_NAME social_dashboard
-    SetEnv DB_USER dashboard_user
-    SetEnv DB_PASSWORD mi_contraseña_segura
-    SetEnv UPLOAD_PASSWORD mogul360secret
-
-    <Directory "/var/www/html/backend">
-        AllowOverride All
-        Require all granted
-    </Directory>
-</VirtualHost>
+```
+/
+├── index.html          ← Frontend (archivos estáticos listos para servir)
+├── assets/
+├── .htaccess           ← Configuración del servidor web (incluido en el release)
+├── backend/
+│   ├── index.php
+│   ├── .htaccess       ← Aquí se configuran las variables de entorno
+│   ├── schema.sql      ← Estructura inicial de la base de datos
+│   ├── vendor/         ← Dependencias PHP pre-instaladas (no modificar)
+│   └── ...
+└── DEPLOYMENT.md
 ```
 
-#### Opción 2: Mediante el archivo `.htaccess` (Si no tiene acceso a la configuración global de Apache)
-Añada las directivas `SetEnv` al inicio del archivo [backend/.htaccess](file:///C:/dockerapps/Social%20Dashboard/backend/.htaccess):
+---
+
+## Paso 1 — Base de datos (via phpMyAdmin)
+
+1. Acceda a **phpMyAdmin** desde el panel de control de su hosting.
+2. Cree una nueva base de datos con el nombre `social_dashboard`
+   y cotejamiento `utf8mb4_unicode_ci`.
+3. Cree un nuevo usuario de base de datos con una contraseña segura
+   y asígnele **todos los privilegios** sobre la base de datos `social_dashboard`.
+   *(En cPanel esto se hace desde "Bases de datos MySQL" → "Agregar usuario a base de datos".)*
+4. En phpMyAdmin, seleccione la base de datos `social_dashboard`,
+   vaya a la pestaña **Importar** y cargue el archivo `backend/schema.sql`
+   incluido en el release.
+
+---
+
+## Paso 2 — Backend PHP
+
+### 2.1 — Subir archivos
+
+Suba el contenido de la carpeta `backend/` del release a la carpeta
+de su servidor web destinada a la API. Por ejemplo:
+- `/public_html/backend/` (si el dashboard vive en la raíz del dominio)
+- `/public_html/api/` (si se sirve como subdominio o subdirectorio)
+
+Puede usar el **Administrador de Archivos** de su panel de control
+o un cliente FTP (FileZilla, WinSCP, etc.).
+
+> **Importante:** El archivo `backend/.htaccess` debe subirse también.
+> Asegúrese de que su cliente FTP esté configurado para mostrar y subir
+> archivos ocultos (los que comienzan con `.`).
+
+### 2.2 — Configurar variables de entorno
+
+Abra el archivo `backend/.htaccess` con el editor de texto del
+Administrador de Archivos y añada estas líneas **al inicio del archivo**,
+reemplazando los valores de ejemplo con los datos reales de su base de datos:
+
 ```apache
-SetEnv DB_HOST 127.0.0.1
-SetEnv DB_NAME social_dashboard
-SetEnv DB_USER dashboard_user
-SetEnv DB_PASSWORD mi_contraseña_segura
+SetEnv DB_HOST      127.0.0.1
+SetEnv DB_NAME      social_dashboard
+SetEnv DB_USER      dashboard_user
+SetEnv DB_PASSWORD  CONTRASEÑA_SEGURA
 SetEnv UPLOAD_PASSWORD mogul360secret
-
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^ index.php [QSA,L]
 ```
 
-### Paso C: Configuración de Permisos de Archivos
-Asegúrese de que el servidor web (habitualmente el usuario `www-data` en Ubuntu/Debian o `apache` en RHEL/CentOS) tenga permisos de lectura y ejecución en los archivos PHP, y que los directorios temporales de carga del sistema operativo estén disponibles.
-```bash
-sudo chown -R www-data:www-data /var/www/html/backend
-sudo find /var/www/html/backend -type d -exec chmod 755 {} \;
-sudo find /var/www/html/backend -type f -exec chmod 644 {} \;
-```
+Guarde el archivo.
+
+> **Nota:** `UPLOAD_PASSWORD` es la clave que el usuario del dashboard
+> debe ingresar para subir reportes Excel. Puede cambiarla por cualquier
+> valor que prefiera.
 
 ---
 
-## 4. Despliegue del Frontend (React)
+## Paso 3 — Frontend
 
-Dado que el frontend es una Single Page Application (SPA), la compilaremos para generar archivos estáticos HTML/JS/CSS de producción que pueden ser servidos de manera ultra-rápida por cualquier servidor web en los puertos estándar (80/443).
+Suba **todos los archivos de la raíz del release** (excepto la carpeta
+`backend/` y este archivo `DEPLOYMENT.md`) al directorio raíz de documentos
+de su servidor web (por ejemplo `/public_html/`).
 
-### Paso A: Compilación del Frontend
-1. En su servidor de compilación o máquina local, prepare el archivo de entorno en el directorio `frontend/` (o en la raíz si allí reside el archivo de build del frontend).
-2. Configure la variable con la URL del backend PHP de producción. Por ejemplo, en el archivo `.env.production`:
-   ```env
-   VITE_API_URL=http://api.socialdashboard.local:8000
-   ```
-3. Instale las dependencias de Node y compile la aplicación:
-   ```bash
-   cd /ruta/al/proyecto/frontend
-   pnpm install
-   pnpm run build
-   ```
-   Esto generará un directorio llamado `dist/` que contiene todos los archivos estáticos de producción compilados y optimizados.
-
-### Paso B: Publicación en el Servidor Web
-1. Copie el contenido del directorio `frontend/dist/` a la raíz de documentos de su servidor web principal de producción (por ejemplo, `/var/www/html/`).
-2. Si utiliza **Apache**, configure un archivo `.htaccess` en el directorio del frontend para evitar errores de tipo "404 Not Found" al recargar páginas internas (debido al enrutamiento de React Router):
-   ```apache
-   <IfModule mod_rewrite.c>
-     RewriteEngine On
-     RewriteBase /
-     RewriteRule ^index\.html$ - [L]
-     RewriteCond %{REQUEST_FILENAME} !-f
-     RewriteCond %{REQUEST_FILENAME} !-d
-     RewriteRule . /index.html [L]
-   </IfModule>
-   ```
+El archivo `.htaccess` de la raíz ya está incluido en el release.
+Debe subirse junto con el resto de archivos.
 
 ---
 
-## 5. Verificación del Despliegue
+## Paso 4 — Verificación
 
-Una vez completado el despliegue de ambos componentes, realice las siguientes comprobaciones para verificar el correcto funcionamiento:
+### 4.1 — API respondiendo
 
-1. **Prueba de Conexión a la API**:
-   Abra un navegador o ejecute un comando `curl` para verificar la respuesta del backend:
-   ```bash
-   curl -I http://api.socialdashboard.local:8000/api/report-metadata
-   ```
-   Debería recibir una respuesta HTTP `200 OK` con un cuerpo JSON conteniendo la información de mes y año o un JSON vacío `{}` en caso de que no existan metadatos aún en la base de datos.
+Abra su navegador y acceda a:
 
-2. **Acceso al Dashboard**:
-   Ingrese a la URL donde se desplegó el frontend (ej. `http://socialdashboard.local`). Los paneles gráficos, tarjetas de KPI y la tabla principal deben cargarse vacíos si no hay datos.
+```
+http://su-dominio.com/backend/api/report-metadata
+```
 
-3. **Carga de Datos (Excel)**:
-   * Vaya al modal de carga haciendo clic en **"Cargar nuevo reporte semanal"** en el pie de página.
-   * Introduzca la contraseña de carga (`UPLOAD_PASSWORD`) configurada en sus variables de entorno.
-   * Suba un archivo Excel válido. El sistema debería notificar el éxito de la carga.
-   * Verifique que los gráficos y métricas se pueblen de forma inmediata y consistente.
+Debe ver una respuesta en formato JSON: `{}` si no hay datos cargados aún,
+o un objeto con información de mes/año si ya existen reportes.
 
-4. **Descarga del Reporte Word**:
-   * Haga clic en el botón de descarga en el Header de la aplicación.
-   * Verifique que se descargue un archivo `.docx` con el nombre correcto y que este se pueda abrir correctamente mostrando las tablas de la campaña.
+### 4.2 — Frontend accesible
+
+Abra `http://su-dominio.com` en el navegador. El dashboard debe cargar
+mostrando los paneles vacíos, sin mensajes de error.
+
+### 4.3 — Carga de datos (prueba funcional)
+
+1. Haga clic en **"Cargar nuevo reporte semanal"** en el pie de página.
+2. Ingrese la `UPLOAD_PASSWORD` que configuró en el Paso 2.
+3. Suba un archivo Excel válido.
+4. Verifique que los gráficos y métricas se actualicen correctamente.
+
+### 4.4 — Descarga de reporte
+
+Haga clic en el botón de descarga del encabezado y verifique que se
+descargue un archivo `.docx` con los datos del reporte.
+
+---
+
+## Variables de entorno — referencia rápida
+
+| Variable | Descripción | Ejemplo |
+|---|---|---|
+| `DB_HOST` | Host del servidor de base de datos | `127.0.0.1` |
+| `DB_NAME` | Nombre de la base de datos | `social_dashboard` |
+| `DB_USER` | Usuario de la base de datos | `dashboard_user` |
+| `DB_PASSWORD` | Contraseña del usuario DB | `CONTRASEÑA_SEGURA` |
+| `UPLOAD_PASSWORD` | Clave para autorizar la carga de Excel | `mogul360secret` |
+
+---
+
+## Problemas comunes
+
+| Síntoma | Causa probable | Solución |
+|---|---|---|
+| La API devuelve error 500 | Variables de entorno no configuradas | Revisar `backend/.htaccess` |
+| La API devuelve error 404 | `mod_rewrite` no habilitado o `.htaccess` no subido | Verificar con el proveedor de hosting |
+| No se puede subir Excel | `UPLOAD_PASSWORD` incorrecta | Verificar el valor en `backend/.htaccess` |
+| El frontend muestra pantalla en blanco | `.htaccess` de la raíz no subido | Subir el archivo `.htaccess` de la raíz del release |
