@@ -224,9 +224,22 @@ class ReportGenerator
             if (isset($sentitudes[$s])) $sentitudes[$s]++;
         }
 
-        $kioscoCount = array_sum(array_map(fn($r) => $r['categoria_perfil'] === 'Kiosco' ? 1 : 0, $organicRecords));
-        $ugcCount = array_sum(array_map(fn($r) => $r['categoria_perfil'] !== 'Kiosco' ? 1 : 0, $organicRecords)) + array_sum(array_map(fn($r) => $r['categoria'] === 'CANJE' ? 1 : 0, $paidRecords));
-        $influencersCount = array_sum(array_map(fn($r) => $r['categoria'] === 'PRESUPUESTO' ? 1 : 0, $paidRecords));
+        $kioscoCount = 0;
+        $ugcCount = 0;
+        $influencersCount = 0;
+
+        foreach ($organicRecords as $r) {
+            $p = $r['categoria_perfil'];
+            if ($p === 'Kiosco') $kioscoCount++;
+            elseif ($p === 'UGC') $ugcCount++;
+            elseif ($p === 'Influencer') $influencersCount++;
+        }
+        foreach ($paidRecords as $r) {
+            $p = $r['categoria'];
+            if ($p === 'Kiosco') $kioscoCount++;
+            elseif ($p === 'UGC') $ugcCount++;
+            elseif ($p === 'Influencer') $influencersCount++;
+        }
 
         $section->addText("Distribución de Sentimiento:", ['bold' => true]);
         $section->addTextBreak(1);

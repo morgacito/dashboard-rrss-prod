@@ -63,11 +63,11 @@ class ExcelParser
             $connection->exec('DELETE FROM paid_campaign');
 
             $sqlOrganic = 'INSERT INTO organic_campaign (
-                mencion_id, semana, mes, usuario, plataforma, link_publicacion, categoria_perfil,
-                views_semana, aumento_views, likes, compartidos, comentarios, guardados, sentiment
+                semana, mes, usuario, plataforma, link_publicacion, categoria_perfil,
+                views_semana, likes, compartidos, comentarios, guardados, sentiment
             ) VALUES (
-                :mencion_id, :semana, :mes, :usuario, :plataforma, :link_publicacion, :categoria_perfil,
-                :views_semana, :aumento_views, :likes, :compartidos, :comentarios, :guardados, :sentiment
+                :semana, :mes, :usuario, :plataforma, :link_publicacion, :categoria_perfil,
+                :views_semana, :likes, :compartidos, :comentarios, :guardados, :sentiment
             )';
             $stmtOrganic = $connection->prepare($sqlOrganic);
             foreach ($organicRecords as $record) {
@@ -75,11 +75,11 @@ class ExcelParser
             }
 
             $sqlPaid = 'INSERT INTO paid_campaign (
-                mencion_id, semana, mes, usuario, plataforma, link_publicacion, categoria,
-                views_semana, aumento_views, likes, compartidos, comentarios, guardados, sentiment
+                semana, mes, usuario, plataforma, link_publicacion, categoria,
+                views_semana, likes, compartidos, comentarios, guardados, sentiment
             ) VALUES (
-                :mencion_id, :semana, :mes, :usuario, :plataforma, :link_publicacion, :categoria,
-                :views_semana, :aumento_views, :likes, :compartidos, :comentarios, :guardados, :sentiment
+                :semana, :mes, :usuario, :plataforma, :link_publicacion, :categoria,
+                :views_semana, :likes, :compartidos, :comentarios, :guardados, :sentiment
             )';
             $stmtPaid = $connection->prepare($sqlPaid);
             foreach ($paidRecords as $record) {
@@ -88,11 +88,7 @@ class ExcelParser
 
             $connection->commit();
             
-            // Registramos el tiempo manualmente en la instancia de Database
             $duration = (microtime(true) - $startDb) * 1000;
-            // Hack para inyectar el tiempo si no queremos cambiar la visibilidad de totalQueryTime
-            // Pero como soy el autor, puedo añadir un método o cambiarlo a protected/public.
-            // Optaré por añadir un método addQueryTime.
             if (method_exists($this->db, 'addQueryTime')) {
                 $this->db->addQueryTime($duration);
             }
@@ -138,12 +134,6 @@ class ExcelParser
                 continue;
             }
 
-            $mencionKey = $this->findKeyByHeader($headers, 'nº de Menciones');
-            if (!$mencionKey) {
-                $mencionKey = $this->findKeyByHeader($headers, 'Nº de menciones');
-            }
-            $mencionId = $mencionKey ? $this->parseMetric($row[$mencionKey]) : 0;
-
             $mesKey = $this->findKeyByHeader($headers, 'Mes');
             $mesNum = $mesKey ? (int)$row[$mesKey] : 0;
             $mes = self::MONTH_MAP[$mesNum] ?? 'Desconocido';
@@ -161,14 +151,10 @@ class ExcelParser
             if (!$catKey) {
                 $catKey = $this->findKeyByHeader($headers, "Categoría de Perfil");
             }
-            // En V2, tanto orgánico como pagos usan "Categoría de Perfil" para el Pilar
             $pilar = $catKey ? $this->cleanString($row[$catKey]) : '';
 
             $viewsKey = $this->findKeyByHeader($headers, 'Views semana actual');
             $viewsSemana = $viewsKey ? $this->parseMetric($row[$viewsKey]) : 0;
-
-            $aumentoKey = $this->findKeyByHeader($headers, 'Aumento de views vs semana anterior');
-            $aumentoViews = $aumentoKey ? $this->parseMetric($row[$aumentoKey]) : 0;
 
             $likesKey = $this->findKeyByHeader($headers, 'Likes');
             $likes = $likesKey ? $this->parseMetric($row[$likesKey]) : 0;
@@ -195,14 +181,12 @@ class ExcelParser
             }
 
             $record = [
-                'mencion_id' => $mencionId,
                 'semana' => $semana,
                 'mes' => $mes,
                 'usuario' => $usuario,
                 'plataforma' => $plataforma,
                 'link_publicacion' => $link,
                 'views_semana' => $viewsSemana,
-                'aumento_views' => $aumentoViews,
                 'likes' => $likes,
                 'compartidos' => $compartidos,
                 'comentarios' => $comentarios,

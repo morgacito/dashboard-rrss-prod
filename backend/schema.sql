@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS organic_campaign (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    mencion_id INT NULL,
     semana INT NOT NULL,
     usuario VARCHAR(255) NOT NULL,
     plataforma VARCHAR(50) NOT NULL,
@@ -8,7 +7,6 @@ CREATE TABLE IF NOT EXISTS organic_campaign (
     categoria_perfil VARCHAR(100) NOT NULL,
     mes VARCHAR(20) NOT NULL,
     views_semana INT NULL,
-    aumento_views INT NULL,
     likes INT DEFAULT 0,
     compartidos INT DEFAULT 0,
     comentarios INT DEFAULT 0,
@@ -24,7 +22,6 @@ CREATE TABLE IF NOT EXISTS organic_campaign (
 
 CREATE TABLE IF NOT EXISTS paid_campaign (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    mencion_id INT NULL,
     semana INT NOT NULL,
     mes VARCHAR(20) NOT NULL,
     usuario VARCHAR(255) NOT NULL,
@@ -32,7 +29,6 @@ CREATE TABLE IF NOT EXISTS paid_campaign (
     link_publicacion VARCHAR(512) NOT NULL,
     categoria VARCHAR(100) NOT NULL,
     views_semana INT NULL,
-    aumento_views INT NULL,
     likes INT DEFAULT 0,
     compartidos INT DEFAULT 0,
     comentarios INT DEFAULT 0,

@@ -22,7 +22,6 @@ class MetricsController
             $month = $meta['month'] ?? '';
             $year = (int)($meta['year'] ?? 0);
 
-            // Si no hay metadatos, intentamos obtener el mes de los datos reales
             if (empty($month)) {
                 $stmt = $this->db->query('SELECT mes FROM organic_campaign LIMIT 1');
                 $month = $stmt->fetchColumn() ?: '';
@@ -32,7 +31,6 @@ class MetricsController
                 }
             }
             
-            // Si el año es 0, usamos 2026 (año de la campaña)
             if ($year === 0) {
                 $year = 2026;
             }
@@ -62,7 +60,6 @@ class MetricsController
             $meses = [];
             $semanas = [];
 
-            // Helper for sorting months correctly
             $monthOrder = [
                 'Enero' => 1, 'Febrero' => 2, 'Marzo' => 3, 'Abril' => 4,
                 'Mayo' => 5, 'Junio' => 6, 'Julio' => 7, 'Agosto' => 8,
@@ -121,111 +118,87 @@ class MetricsController
             $orgSummary = ['count' => 0, 'likes' => 0, 'shares' => 0, 'saves' => 0, 'comments' => 0, 'views' => 0];
             $paidSummary = ['count' => 0, 'likes' => 0, 'shares' => 0, 'saves' => 0, 'comments' => 0, 'views' => 0];
 
-            // 1. Organic summary
             if ($tipo === null || strtolower($tipo) === 'organic') {
-                if ($pilar !== 'Influencers') { // Influencers es solo pago
-                    $where = [];
-                    $params = [];
-                    if ($mes) {
-                        $where[] = 'mes = :mes';
-                        $params['mes'] = $mes;
-                    }
+                $where = [];
+                $params = [];
+                if ($mes) {
+                    $where[] = 'mes = :mes';
+                    $params['mes'] = $mes;
+                }
+                if ($semana !== null) {
+                    $where[] = 'semana = :semana';
+                    $params['semana'] = $semana;
+                }
+                if ($plataforma) {
+                    $where[] = 'plataforma = :plataforma';
+                    $params['plataforma'] = $plataforma;
+                }
+                if ($sentiment) {
+                    $where[] = 'sentiment = :sentiment';
+                    $params['sentiment'] = strtoupper($sentiment);
+                }
+                if ($pilar) {
+                    $val = ($pilar === 'Influencers') ? 'Influencer' : $pilar;
+                    $where[] = 'categoria_perfil = :pilar';
+                    $params['pilar'] = $val;
+                }
 
-                    if ($semana !== null) {
-                        $where[] = 'semana = :semana';
-                        $params['semana'] = $semana;
-                    }
-                    if ($plataforma) {
-                        $where[] = 'plataforma = :plataforma';
-                        $params['plataforma'] = $plataforma;
-                    }
-                    if ($sentiment) {
-                        $where[] = 'sentiment = :sentiment';
-                        $params['sentiment'] = strtoupper($sentiment);
-                    }
-                    if ($pilar === 'Kiosco') {
-                        $where[] = "categoria_perfil = 'Kiosco'";
-                    } elseif ($pilar === 'UGC') {
-                        $where[] = "categoria_perfil != 'Kiosco'";
-                    }
-
-                    $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
-                    $sql = "SELECT 
-                                COUNT(*) as count,
-                                SUM(likes) as likes,
-                                SUM(compartidos) as shares,
-                                SUM(guardados) as saves,
-                                SUM(comentarios) as comments,
-                                SUM(views_semana) as views
-                            FROM organic_campaign
-                            $whereSql";
-                    
-                    $stmt = $this->db->query($sql, $params);
-                    $res = $stmt->fetch();
-                    if ($res && $res['count'] > 0) {
-                        $orgSummary = [
-                            'count' => (int)$res['count'],
-                            'likes' => (int)($res['likes'] ?? 0),
-                            'shares' => (int)($res['shares'] ?? 0),
-                            'saves' => (int)($res['saves'] ?? 0),
-                            'comments' => (int)($res['comments'] ?? 0),
-                            'views' => (int)($res['views'] ?? 0),
-                        ];
-                    }
+                $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
+                $sql = "SELECT COUNT(*) as count, SUM(likes) as likes, SUM(compartidos) as shares, SUM(guardados) as saves, SUM(comentarios) as comments, SUM(views_semana) as views FROM organic_campaign $whereSql";
+                
+                $stmt = $this->db->query($sql, $params);
+                $res = $stmt->fetch();
+                if ($res && $res['count'] > 0) {
+                    $orgSummary = [
+                        'count' => (int)$res['count'],
+                        'likes' => (int)($res['likes'] ?? 0),
+                        'shares' => (int)($res['shares'] ?? 0),
+                        'saves' => (int)($res['saves'] ?? 0),
+                        'comments' => (int)($res['comments'] ?? 0),
+                        'views' => (int)($res['views'] ?? 0),
+                    ];
                 }
             }
 
-            // 2. Paid summary
             if ($tipo === null || strtolower($tipo) === 'paid') {
-                if ($pilar !== 'Kiosco') { // Kiosco es solo orgánico
-                    $where = [];
-                    $params = [];
-                    if ($mes) {
-                        $where[] = 'mes = :mes';
-                        $params['mes'] = $mes;
-                    }
+                $where = [];
+                $params = [];
+                if ($mes) {
+                    $where[] = 'mes = :mes';
+                    $params['mes'] = $mes;
+                }
+                if ($semana !== null) {
+                    $where[] = 'semana = :semana';
+                    $params['semana'] = $semana;
+                }
+                if ($plataforma) {
+                    $where[] = 'plataforma = :plataforma';
+                    $params['plataforma'] = $plataforma;
+                }
+                if ($sentiment) {
+                    $where[] = 'sentiment = :sentiment';
+                    $params['sentiment'] = strtoupper($sentiment);
+                }
+                if ($pilar) {
+                    $val = ($pilar === 'Influencers') ? 'Influencer' : $pilar;
+                    $where[] = 'categoria = :pilar';
+                    $params['pilar'] = $val;
+                }
 
-                    if ($semana !== null) {
-                        $where[] = 'semana = :semana';
-                        $params['semana'] = $semana;
-                    }
-                    if ($plataforma) {
-                        $where[] = 'plataforma = :plataforma';
-                        $params['plataforma'] = $plataforma;
-                    }
-                    if ($sentiment) {
-                        $where[] = 'sentiment = :sentiment';
-                        $params['sentiment'] = strtoupper($sentiment);
-                    }
-                    if ($pilar === 'Influencers') {
-                        $where[] = "categoria = 'PRESUPUESTO'";
-                    } elseif ($pilar === 'UGC') {
-                        $where[] = "categoria = 'CANJE'";
-                    }
-
-                    $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
-                    $sql = "SELECT 
-                                COUNT(*) as count,
-                                SUM(likes) as likes,
-                                SUM(compartidos) as shares,
-                                SUM(guardados) as saves,
-                                SUM(comentarios) as comments,
-                                SUM(views_semana) as views
-                            FROM paid_campaign
-                            $whereSql";
-                    
-                    $stmt = $this->db->query($sql, $params);
-                    $res = $stmt->fetch();
-                    if ($res && $res['count'] > 0) {
-                        $paidSummary = [
-                            'count' => (int)$res['count'],
-                            'likes' => (int)($res['likes'] ?? 0),
-                            'shares' => (int)($res['shares'] ?? 0),
-                            'saves' => (int)($res['saves'] ?? 0),
-                            'comments' => (int)($res['comments'] ?? 0),
-                            'views' => (int)($res['views'] ?? 0),
-                        ];
-                    }
+                $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
+                $sql = "SELECT COUNT(*) as count, SUM(likes) as likes, SUM(compartidos) as shares, SUM(guardados) as saves, SUM(comentarios) as comments, SUM(views_semana) as views FROM paid_campaign $whereSql";
+                
+                $stmt = $this->db->query($sql, $params);
+                $res = $stmt->fetch();
+                if ($res && $res['count'] > 0) {
+                    $paidSummary = [
+                        'count' => (int)$res['count'],
+                        'likes' => (int)($res['likes'] ?? 0),
+                        'shares' => (int)($res['shares'] ?? 0),
+                        'saves' => (int)($res['saves'] ?? 0),
+                        'comments' => (int)($res['comments'] ?? 0),
+                        'views' => (int)($res['views'] ?? 0),
+                    ];
                 }
             }
 
@@ -256,116 +229,58 @@ class MetricsController
             $tipo = $_GET['tipo'] ?? null;
             $pilar = $_GET['pilar'] ?? null;
 
-            // 1. Weekly evolution (mentions and engagement)
             $orgWeeks = [];
             if ($tipo === null || strtolower($tipo) === 'organic') {
-                if ($pilar !== 'Influencers') {
-                    $where = [];
-                    $params = [];
-                    if ($mes) {
-                        $where[] = 'mes = :mes';
-                        $params['mes'] = $mes;
-                    }
-                    if ($plataforma) {
-                        $where[] = 'plataforma = :plataforma';
-                        $params['plataforma'] = $plataforma;
-                    }
-                    if ($sentiment) {
-                        $where[] = 'sentiment = :sentiment';
-                        $params['sentiment'] = strtoupper($sentiment);
-                    }
-                    if ($pilar === 'Kiosco') {
-                        $where[] = "categoria_perfil = 'Kiosco'";
-                    } elseif ($pilar === 'UGC') {
-                        $where[] = "categoria_perfil != 'Kiosco'";
-                    }
-
-                    $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
-                    $sql = "SELECT 
-                                mes, semana,
-                                COUNT(*) as count,
-                                SUM(likes + compartidos + comentarios + guardados) as engagement
-                            FROM organic_campaign
-                            $whereSql
-                            GROUP BY mes, semana";
-                    $stmt = $this->db->query($sql, $params);
-                    $orgWeeks = $stmt->fetchAll();
+                $where = [];
+                $params = [];
+                if ($mes) { $where[] = 'mes = :mes'; $params['mes'] = $mes; }
+                if ($plataforma) { $where[] = 'plataforma = :plataforma'; $params['plataforma'] = $plataforma; }
+                if ($sentiment) { $where[] = 'sentiment = :sentiment'; $params['sentiment'] = strtoupper($sentiment); }
+                if ($pilar) {
+                    $val = ($pilar === 'Influencers') ? 'Influencer' : $pilar;
+                    $where[] = 'categoria_perfil = :pilar';
+                    $params['pilar'] = $val;
                 }
+
+                $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
+                $sql = "SELECT mes, semana, COUNT(*) as count, SUM(likes + compartidos + comentarios + guardados) as engagement FROM organic_campaign $whereSql GROUP BY mes, semana";
+                $stmt = $this->db->query($sql, $params);
+                $orgWeeks = $stmt->fetchAll();
             }
 
             $paidWeeks = [];
             if ($tipo === null || strtolower($tipo) === 'paid') {
-                if ($pilar !== 'Kiosco') {
-                    $where = [];
-                    $params = [];
-                    if ($mes) {
-                        $where[] = 'mes = :mes';
-                        $params['mes'] = $mes;
-                    }
-                    if ($plataforma) {
-                        $where[] = 'plataforma = :plataforma';
-                        $params['plataforma'] = $plataforma;
-                    }
-                    if ($sentiment) {
-                        $where[] = 'sentiment = :sentiment';
-                        $params['sentiment'] = strtoupper($sentiment);
-                    }
-                    if ($pilar === 'Influencers') {
-                        $where[] = "categoria = 'PRESUPUESTO'";
-                    } elseif ($pilar === 'UGC') {
-                        $where[] = "categoria = 'CANJE'";
-                    }
-
-                    $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
-                    $sql = "SELECT 
-                                mes, semana,
-                                COUNT(*) as count,
-                                SUM(likes + compartidos + comentarios + guardados) as engagement
-                            FROM paid_campaign
-                            $whereSql
-                            GROUP BY mes, semana";
-                    $stmt = $this->db->query($sql, $params);
-                    $paidWeeks = $stmt->fetchAll();
+                $where = [];
+                $params = [];
+                if ($mes) { $where[] = 'mes = :mes'; $params['mes'] = $mes; }
+                if ($plataforma) { $where[] = 'plataforma = :plataforma'; $params['plataforma'] = $plataforma; }
+                if ($sentiment) { $where[] = 'sentiment = :sentiment'; $params['sentiment'] = strtoupper($sentiment); }
+                if ($pilar) {
+                    $val = ($pilar === 'Influencers') ? 'Influencer' : $pilar;
+                    $where[] = 'categoria = :pilar';
+                    $params['pilar'] = $val;
                 }
+
+                $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
+                $sql = "SELECT mes, semana, COUNT(*) as count, SUM(likes + compartidos + comentarios + guardados) as engagement FROM paid_campaign $whereSql GROUP BY mes, semana";
+                $stmt = $this->db->query($sql, $params);
+                $paidWeeks = $stmt->fetchAll();
             }
 
-            // Helper for sorting months correctly
-            $monthOrder = [
-                'Enero' => 1, 'Febrero' => 2, 'Marzo' => 3, 'Abril' => 4,
-                'Mayo' => 5, 'Junio' => 6, 'Julio' => 7, 'Agosto' => 8,
-                'Septiembre' => 9, 'Octubre' => 10, 'Noviembre' => 11, 'Diciembre' => 12
-            ];
-
-            // Merge weekly data
+            $monthOrder = ['Enero'=>1,'Febrero'=>2,'Marzo'=>3,'Abril'=>4,'Mayo'=>5,'Junio'=>6,'Julio'=>7,'Agosto'=>8,'Septiembre'=>9,'Octubre'=>10,'Noviembre'=>11,'Diciembre'=>12];
             $weeklyData = [];
             foreach ($orgWeeks as $row) {
-                $m = $row['mes'];
-                $w = (int)$row['semana'];
-                $mNum = $monthOrder[$m] ?? 99;
+                $m = $row['mes']; $w = (int)$row['semana']; $mNum = $monthOrder[$m] ?? 99;
                 $key = sprintf("%02d-%02d", $mNum, $w);
                 $label = $mes ? $w : "$w ($m)";
-                $weeklyData[$key] = [
-                    'semana' => $label,
-                    'organic_mentions' => (int)$row['count'],
-                    'organic_engagement' => (int)($row['engagement'] ?? 0),
-                    'paid_mentions' => 0,
-                    'paid_engagement' => 0
-                ];
+                $weeklyData[$key] = ['semana' => $label, 'organic_mentions' => (int)$row['count'], 'organic_engagement' => (int)($row['engagement'] ?? 0), 'paid_mentions' => 0, 'paid_engagement' => 0];
             }
             foreach ($paidWeeks as $row) {
-                $m = $row['mes'];
-                $w = (int)$row['semana'];
-                $mNum = $monthOrder[$m] ?? 99;
+                $m = $row['mes']; $w = (int)$row['semana']; $mNum = $monthOrder[$m] ?? 99;
                 $key = sprintf("%02d-%02d", $mNum, $w);
                 $label = $mes ? $w : "$w ($m)";
                 if (!isset($weeklyData[$key])) {
-                    $weeklyData[$key] = [
-                        'semana' => $label,
-                        'organic_mentions' => 0,
-                        'organic_engagement' => 0,
-                        'paid_mentions' => (int)$row['count'],
-                        'paid_engagement' => (int)($row['engagement'] ?? 0)
-                    ];
+                    $weeklyData[$key] = ['semana' => $label, 'organic_mentions' => 0, 'organic_engagement' => 0, 'paid_mentions' => (int)$row['count'], 'paid_engagement' => (int)($row['engagement'] ?? 0)];
                 } else {
                     $weeklyData[$key]['paid_mentions'] = (int)$row['count'];
                     $weeklyData[$key]['paid_engagement'] = (int)($row['engagement'] ?? 0);
@@ -374,150 +289,53 @@ class MetricsController
             ksort($weeklyData);
             $weeklyChart = array_values($weeklyData);
 
-            // 2. Sentiments distribution
             $sentimentsCount = ['POSITIVO' => 0, 'NEGATIVO' => 0, 'NEUTRO' => 0];
-
-            if ($tipo === null || strtolower($tipo) === 'organic') {
-                if ($pilar !== 'Influencers') {
-                    $where = [];
-                    $params = [];
-                    if ($mes) {
-                        $where[] = 'mes = :mes';
-                        $params['mes'] = $mes;
-                    }
-                    if ($semana !== null) {
-                        $where[] = 'semana = :semana';
-                        $params['semana'] = $semana;
-                    }
-                    if ($plataforma) {
-                        $where[] = 'plataforma = :plataforma';
-                        $params['plataforma'] = $plataforma;
-                    }
-                    if ($pilar === 'Kiosco') {
-                        $where[] = "categoria_perfil = 'Kiosco'";
-                    } elseif ($pilar === 'UGC') {
-                        $where[] = "categoria_perfil != 'Kiosco'";
-                    }
-
-                    $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
-                    $sql = "SELECT sentiment, COUNT(*) as count FROM organic_campaign $whereSql GROUP BY sentiment";
-                    $stmt = $this->db->query($sql, $params);
-                    foreach ($stmt->fetchAll() as $row) {
-                        $sent = strtoupper(trim($row['sentiment']));
-                        if (isset($sentimentsCount[$sent])) {
-                            $sentimentsCount[$sent] += (int)$row['count'];
-                        }
-                    }
+            $procSent = function($table, $colPilar) use ($tipo, $pilar, $mes, $semana, $plataforma, &$sentimentsCount) {
+                $where = []; $params = [];
+                if ($mes) { $where[] = 'mes = :mes'; $params['mes'] = $mes; }
+                if ($semana !== null) { $where[] = 'semana = :semana'; $params['semana'] = $semana; }
+                if ($plataforma) { $where[] = 'plataforma = :plataforma'; $params['plataforma'] = $plataforma; }
+                if ($pilar) {
+                    $val = ($pilar === 'Influencers') ? 'Influencer' : $pilar;
+                    $where[] = "$colPilar = :pilar";
+                    $params['pilar'] = $val;
                 }
-            }
-
-            if ($tipo === null || strtolower($tipo) === 'paid') {
-                if ($pilar !== 'Kiosco') {
-                    $where = [];
-                    $params = [];
-                    if ($mes) {
-                        $where[] = 'mes = :mes';
-                        $params['mes'] = $mes;
-                    }
-                    if ($semana !== null) {
-                        $where[] = 'semana = :semana';
-                        $params['semana'] = $semana;
-                    }
-                    if ($plataforma) {
-                        $where[] = 'plataforma = :plataforma';
-                        $params['plataforma'] = $plataforma;
-                    }
-                    if ($pilar === 'Influencers') {
-                        $where[] = "categoria = 'PRESUPUESTO'";
-                    } elseif ($pilar === 'UGC') {
-                        $where[] = "categoria = 'CANJE'";
-                    }
-
-                    $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
-                    $sql = "SELECT sentiment, COUNT(*) as count FROM paid_campaign $whereSql GROUP BY sentiment";
-                    $stmt = $this->db->query($sql, $params);
-                    foreach ($stmt->fetchAll() as $row) {
-                        $sent = strtoupper(trim($row['sentiment']));
-                        if (isset($sentimentsCount[$sent])) {
-                            $sentimentsCount[$sent] += (int)$row['count'];
-                        }
-                    }
-                }
-            }
-
-            // 3. Content Pillars distribution
-            $kioscoCount = 0;
-            $ugcCount = 0;
-            $influencersCount = 0;
-
-            if ($tipo === null || strtolower($tipo) === 'organic') {
-                $where = [];
-                $params = [];
-                    if ($mes) {
-                        $where[] = 'mes = :mes';
-                        $params['mes'] = $mes;
-                    }
-                if ($semana !== null) {
-                    $where[] = 'semana = :semana';
-                    $params['semana'] = $semana;
-                }
-                if ($plataforma) {
-                    $where[] = 'plataforma = :plataforma';
-                    $params['plataforma'] = $plataforma;
-                }
-                if ($sentiment) {
-                    $where[] = 'sentiment = :sentiment';
-                    $params['sentiment'] = strtoupper($sentiment);
-                }
-
                 $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
-                $sqlKiosco = "SELECT COUNT(*) FROM organic_campaign $whereSql " . (count($where) > 0 ? 'AND' : 'WHERE') . " categoria_perfil = 'Kiosco'";
-                $stmt = $this->db->query($sqlKiosco, $params);
-                $kioscoCount = (int)$stmt->fetchColumn();
-
-                $sqlUgc = "SELECT COUNT(*) FROM organic_campaign $whereSql " . (count($where) > 0 ? 'AND' : 'WHERE') . " categoria_perfil != 'Kiosco'";
-                $stmt = $this->db->query($sqlUgc, $params);
-                $ugcCount += (int)$stmt->fetchColumn();
-            }
-
-            if ($tipo === null || strtolower($tipo) === 'paid') {
-                $where = [];
-                $params = [];
-                    if ($mes) {
-                        $where[] = 'mes = :mes';
-                        $params['mes'] = $mes;
-                    }
-                if ($semana !== null) {
-                    $where[] = 'semana = :semana';
-                    $params['semana'] = $semana;
+                $sql = "SELECT sentiment, COUNT(*) as count FROM $table $whereSql GROUP BY sentiment";
+                $stmt = $this->db->query($sql, $params);
+                foreach ($stmt->fetchAll() as $row) {
+                    $sent = strtoupper(trim($row['sentiment']));
+                    if (isset($sentimentsCount[$sent])) $sentimentsCount[$sent] += (int)$row['count'];
                 }
-                if ($plataforma) {
-                    $where[] = 'plataforma = :plataforma';
-                    $params['plataforma'] = $plataforma;
-                }
-                if ($sentiment) {
-                    $where[] = 'sentiment = :sentiment';
-                    $params['sentiment'] = strtoupper($sentiment);
-                }
+            };
+            if ($tipo === null || strtolower($tipo) === 'organic') $procSent('organic_campaign', 'categoria_perfil');
+            if ($tipo === null || strtolower($tipo) === 'paid') $procSent('paid_campaign', 'categoria');
 
+            $pillars = ['Kiosco' => 0, 'UGC' => 0, 'Influencer' => 0];
+            $procPillars = function($table, $colPilar) use ($tipo, $mes, $semana, $plataforma, $sentiment, &$pillars) {
+                $where = []; $params = [];
+                if ($mes) { $where[] = 'mes = :mes'; $params['mes'] = $mes; }
+                if ($semana !== null) { $where[] = 'semana = :semana'; $params['semana'] = $semana; }
+                if ($plataforma) { $where[] = 'plataforma = :plataforma'; $params['plataforma'] = $plataforma; }
+                if ($sentiment) { $where[] = 'sentiment = :sentiment'; $params['sentiment'] = strtoupper($sentiment); }
                 $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
-                
-                $sqlUgcPaid = "SELECT COUNT(*) FROM paid_campaign $whereSql " . (count($where) > 0 ? 'AND' : 'WHERE') . " categoria = 'CANJE'";
-                $stmt = $this->db->query($sqlUgcPaid, $params);
-                $ugcCount += (int)$stmt->fetchColumn();
-
-                $sqlInf = "SELECT COUNT(*) FROM paid_campaign $whereSql " . (count($where) > 0 ? 'AND' : 'WHERE') . " categoria = 'PRESUPUESTO'";
-                $stmt = $this->db->query($sqlInf, $params);
-                $influencersCount = (int)$stmt->fetchColumn();
-            }
+                $sql = "SELECT $colPilar, COUNT(*) as count FROM $table $whereSql GROUP BY $colPilar";
+                $stmt = $this->db->query($sql, $params);
+                foreach ($stmt->fetchAll() as $row) {
+                    $p = $row[$colPilar];
+                    if (isset($pillars[$p])) $pillars[$p] += (int)$row['count'];
+                }
+            };
+            if ($tipo === null || strtolower($tipo) === 'organic') $procPillars('organic_campaign', 'categoria_perfil');
+            if ($tipo === null || strtolower($tipo) === 'paid') $procPillars('paid_campaign', 'categoria');
 
             echo json_encode([
                 'weekly_evolution' => $weeklyChart,
                 'sentiment' => $sentimentsCount,
                 'pillars' => [
-                    'Kiosco' => $kioscoCount,
-                    'UGC' => $ugcCount,
-                    'Influencers' => $influencersCount
+                    'Kiosco' => $pillars['Kiosco'],
+                    'UGC' => $pillars['UGC'],
+                    'Influencers' => $pillars['Influencer']
                 ]
             ], JSON_UNESCAPED_UNICODE);
         } catch (Exception $e) {
@@ -538,123 +356,73 @@ class MetricsController
             $pilar = $_GET['pilar'] ?? null;
 
             $records = [];
-
-            // 1. Fetch Organic
             if ($tipo === null || strtolower($tipo) === 'organic') {
-                if ($pilar !== 'Influencers') {
-                    $where = [];
-                    $params = [];
-                    if ($mes) {
-                        $where[] = 'mes = :mes';
-                        $params['mes'] = $mes;
-                    }
-                    if ($semana !== null) {
-                        $where[] = 'semana = :semana';
-                        $params['semana'] = $semana;
-                    }
-                    if ($plataforma) {
-                        $where[] = 'plataforma = :plataforma';
-                        $params['plataforma'] = $plataforma;
-                    }
-                    if ($sentiment) {
-                        $where[] = 'sentiment = :sentiment';
-                        $params['sentiment'] = strtoupper($sentiment);
-                    }
-                    if ($pilar === 'Kiosco') {
-                        $where[] = "categoria_perfil = 'Kiosco'";
-                    } elseif ($pilar === 'UGC') {
-                        $where[] = "categoria_perfil != 'Kiosco'";
-                    }
-
-                    $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
-                    $sql = "SELECT * FROM organic_campaign $whereSql";
-                    $stmt = $this->db->query($sql, $params);
-
-                    foreach ($stmt->fetchAll() as $row) {
-                        $records[] = [
-                            'id' => 'org_' . $row['id'],
-                            'mencion_id' => (int)$row['mencion_id'],
-                            'semana' => (int)$row['semana'],
-                            'mes' => $row['mes'],
-                            'usuario' => $row['usuario'],
-                            'plataforma' => $row['plataforma'],
-                            'link_publicacion' => $row['link_publicacion'],
-                            'tipo' => 'Orgánico',
-                            'pilar' => $row['categoria_perfil'] === 'Kiosco' ? 'Kiosco' : 'UGC',
-                            'categoria_det' => $row['categoria_perfil'],
-                            'views' => (int)$row['views_semana'],
-                            'likes' => (int)$row['likes'],
-                            'compartidos' => (int)$row['compartidos'],
-                            'comentarios' => (int)$row['comentarios'],
-                            'guardados' => (int)$row['guardados'],
-                            'sentiment' => $row['sentiment']
-                        ];
-                    }
+                $where = []; $params = [];
+                if ($mes) { $where[] = 'mes = :mes'; $params['mes'] = $mes; }
+                if ($semana !== null) { $where[] = 'semana = :semana'; $params['semana'] = $semana; }
+                if ($plataforma) { $where[] = 'plataforma = :plataforma'; $params['plataforma'] = $plataforma; }
+                if ($sentiment) { $where[] = 'sentiment = :sentiment'; $params['sentiment'] = strtoupper($sentiment); }
+                if ($pilar) {
+                    $val = ($pilar === 'Influencers') ? 'Influencer' : $pilar;
+                    $where[] = 'categoria_perfil = :pilar';
+                    $params['pilar'] = $val;
+                }
+                $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
+                $sql = "SELECT * FROM organic_campaign $whereSql";
+                foreach ($this->db->query($sql, $params)->fetchAll() as $row) {
+                    $records[] = [
+                        'id' => 'org_' . $row['id'],
+                        'semana' => (int)$row['semana'],
+                        'mes' => $row['mes'],
+                        'usuario' => $row['usuario'],
+                        'plataforma' => $row['plataforma'],
+                        'link_publicacion' => $row['link_publicacion'],
+                        'tipo' => 'Orgánico',
+                        'pilar' => ($row['categoria_perfil'] === 'Influencer') ? 'Influencers' : $row['categoria_perfil'],
+                        'views' => (int)$row['views_semana'],
+                        'likes' => (int)$row['likes'],
+                        'compartidos' => (int)$row['compartidos'],
+                        'comentarios' => (int)$row['comentarios'],
+                        'guardados' => (int)$row['guardados'],
+                        'sentiment' => $row['sentiment']
+                    ];
                 }
             }
- 
-            // 2. Fetch Paid
+
             if ($tipo === null || strtolower($tipo) === 'paid') {
-                if ($pilar !== 'Kiosco') {
-                    $where = [];
-                    $params = [];
-                    if ($mes) {
-                        $where[] = 'mes = :mes';
-                        $params['mes'] = $mes;
-                    }
-                    if ($semana !== null) {
-                        $where[] = 'semana = :semana';
-                        $params['semana'] = $semana;
-                    }
-                    if ($plataforma) {
-                        $where[] = 'plataforma = :plataforma';
-                        $params['plataforma'] = $plataforma;
-                    }
-                    if ($sentiment) {
-                        $where[] = 'sentiment = :sentiment';
-                        $params['sentiment'] = strtoupper($sentiment);
-                    }
-                    if ($pilar === 'Influencers') {
-                        $where[] = "categoria = 'PRESUPUESTO'";
-                    } elseif ($pilar === 'UGC') {
-                        $where[] = "categoria = 'CANJE'";
-                    }
- 
-                    $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
-                    $sql = "SELECT * FROM paid_campaign $whereSql";
-                    $stmt = $this->db->query($sql, $params);
- 
-                    foreach ($stmt->fetchAll() as $row) {
-                        $records[] = [
-                            'id' => 'paid_' . $row['id'],
-                            'mencion_id' => (int)$row['mencion_id'],
-                            'semana' => (int)$row['semana'],
-                            'mes' => $row['mes'],
-                            'usuario' => $row['usuario'],
-                            'plataforma' => $row['plataforma'],
-                            'link_publicacion' => $row['link_publicacion'],
-                            'tipo' => 'Pago',
-                            'pilar' => $row['categoria'] === 'PRESUPUESTO' ? 'Influencers' : 'UGC',
-                            'categoria_det' => $row['categoria'],
-                            'views' => (int)$row['views_semana'],
-                            'likes' => (int)$row['likes'],
-                            'compartidos' => (int)$row['compartidos'],
-                            'comentarios' => (int)$row['comentarios'],
-                            'guardados' => (int)$row['guardados'],
-                            'sentiment' => $row['sentiment']
-                        ];
-                    }
+                $where = []; $params = [];
+                if ($mes) { $where[] = 'mes = :mes'; $params['mes'] = $mes; }
+                if ($semana !== null) { $where[] = 'semana = :semana'; $params['semana'] = $semana; }
+                if ($plataforma) { $where[] = 'plataforma = :plataforma'; $params['plataforma'] = $plataforma; }
+                if ($sentiment) { $where[] = 'sentiment = :sentiment'; $params['sentiment'] = strtoupper($sentiment); }
+                if ($pilar) {
+                    $val = ($pilar === 'Influencers') ? 'Influencer' : $pilar;
+                    $where[] = 'categoria = :pilar';
+                    $params['pilar'] = $val;
+                }
+                $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
+                $sql = "SELECT * FROM paid_campaign $whereSql";
+                foreach ($this->db->query($sql, $params)->fetchAll() as $row) {
+                    $records[] = [
+                        'id' => 'paid_' . $row['id'],
+                        'semana' => (int)$row['semana'],
+                        'mes' => $row['mes'],
+                        'usuario' => $row['usuario'],
+                        'plataforma' => $row['plataforma'],
+                        'link_publicacion' => $row['link_publicacion'],
+                        'tipo' => 'Pago',
+                        'pilar' => ($row['categoria'] === 'Influencer') ? 'Influencers' : $row['categoria'],
+                        'views' => (int)$row['views_semana'],
+                        'likes' => (int)$row['likes'],
+                        'compartidos' => (int)$row['compartidos'],
+                        'comentarios' => (int)$row['comentarios'],
+                        'guardados' => (int)$row['guardados'],
+                        'sentiment' => $row['sentiment']
+                    ];
                 }
             }
 
-            // Ordenar por semana desc, luego likes desc
-            usort($records, function($a, $b) {
-                if ($a['semana'] !== $b['semana']) {
-                    return $b['semana'] <=> $a['semana']; // Semana desc
-                }
-                return $b['likes'] <=> $a['likes']; // Likes desc
-            });
-
+            usort($records, fn($a, $b) => ($a['semana'] !== $b['semana']) ? ($b['semana'] <=> $a['semana']) : ($b['likes'] <=> $a['likes']));
             echo json_encode($records, JSON_UNESCAPED_UNICODE);
         } catch (Exception $e) {
             http_response_code(500);
@@ -667,36 +435,19 @@ class MetricsController
         try {
             $generator = new ReportGenerator($this->db);
             $docxData = $generator->generate();
-
             if ($docxData === null) {
                 http_response_code(404);
-                header('Content-Type: application/json');
-                echo json_encode(['error' => 'No hay datos de reporte disponibles para descargar.'], JSON_UNESCAPED_UNICODE);
+                echo json_encode(['error' => 'No hay datos disponibles']);
                 return;
             }
-
-            // Limpiar cualquier salida previa del búfer para evitar corrupción del archivo binario
-            if (ob_get_length()) {
-                ob_clean();
-            }
-
-            header('Content-Description: File Transfer');
+            if (ob_get_length()) ob_clean();
             header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
             header('Content-Disposition: attachment; filename="Reporte_Consolidado_Mogul_360.docx"');
-            header('Content-Transfer-Encoding: binary');
-            header('Expires: 0');
-            header('Cache-Control: must-revalidate');
-            header('Pragma: public');
-            header('Content-Length: ' . strlen($docxData));
-
             echo $docxData;
-            if (!defined('PHPUNIT_COMPOSER_INSTALL') && !class_exists('PHPUnit\\Framework\\TestCase')) {
-                exit;
-            }
+            exit;
         } catch (Exception $e) {
             http_response_code(500);
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'Error al generar el reporte Word: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['error' => $e->getMessage()]);
         }
     }
 }
