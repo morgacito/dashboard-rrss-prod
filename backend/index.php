@@ -39,6 +39,11 @@ $router->get('/api/metrics/table', function() use ($db) {
     $controller->getTableData();
 });
 
+$router->get('/api/filters', function() use ($db) {
+    $controller = new MetricsController($db);
+    $controller->getFilters();
+});
+
 $router->get('/api/report/download', function() use ($db) {
     $controller = new MetricsController($db);
     $controller->downloadReport();

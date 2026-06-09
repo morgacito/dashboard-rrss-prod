@@ -20,18 +20,92 @@ class MetricsController
             $stmt = $connection->query('SELECT month, year FROM report_metadata LIMIT 1');
             $meta = $stmt->fetch();
 
-            if (!$meta) {
-                echo json_encode(['month' => null, 'year' => null]);
-                return;
+            $month = $meta['month'] ?? '';
+            $year = (int)($meta['year'] ?? 0);
+
+            // Si no hay metadatos, intentamos obtener el mes de los datos reales
+            if (empty($month)) {
+                $stmt = $connection->query('SELECT mes FROM organic_campaign LIMIT 1');
+                $month = $stmt->fetchColumn() ?: '';
+                if (empty($month)) {
+                    $stmt = $connection->query('SELECT mes FROM paid_campaign LIMIT 1');
+                    $month = $stmt->fetchColumn() ?: '';
+                }
+            }
+            
+            // Si el año es 0, usamos 2026 (año de la campaña)
+            if ($year === 0) {
+                $year = 2026;
             }
 
             echo json_encode([
-                'month' => $meta['month'],
-                'year' => (int)$meta['year']
+                'month' => $month,
+                'year' => $year
             ], JSON_UNESCAPED_UNICODE);
         } catch (Exception $e) {
             http_response_code(500);
             echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    public function getFilters(): void
+    {
+        $connection = $this->db->getConnection();
+        try {
+            $sql = "SELECT DISTINCT mes, semana FROM (
+                        SELECT mes, semana FROM organic_campaign
+                        UNION
+                        SELECT mes, semana FROM paid_campaign
+                    ) as combined
+                    ORDER BY mes, semana";
+            $stmt = $connection->query($sql);
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $meses = [];
+            $semanas = [];
+
+            // Helper for sorting months correctly
+            $monthOrder = [
+                'Enero' => 1, 'Febrero' => 2, 'Marzo' => 3, 'Abril' => 4,
+                'Mayo' => 5, 'Junio' => 6, 'Julio' => 7, 'Agosto' => 8,
+                'Septiembre' => 9, 'Octubre' => 10, 'Noviembre' => 11, 'Diciembre' => 12
+            ];
+
+            foreach ($results as $row) {
+                $mes = $row['mes'];
+                $semana = (int)$row['semana'];
+                
+                if (!in_array($mes, $meses)) {
+                    $meses[] = $mes;
+                }
+                
+                if (!isset($semanas[$mes])) {
+                    $semanas[$mes] = [];
+                }
+                if (!in_array($semana, $semanas[$mes])) {
+                    $semanas[$mes][] = $semana;
+                }
+            }
+
+            usort($meses, function($a, $b) use ($monthOrder) {
+                $orderA = $monthOrder[$a] ?? 99;
+                $orderB = $monthOrder[$b] ?? 99;
+                return $orderA <=> $orderB;
+            });
+
+            foreach ($semanas as $m => &$s) {
+                sort($s);
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode([
+                'meses' => $meses,
+                'semanas' => $semanas
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (Exception $e) {
+            http_response_code(500);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Error al obtener filtros: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
         }
     }
 
@@ -40,6 +114,8 @@ class MetricsController
         header('Content-Type: application/json');
         try {
             $semana = isset($_GET['semana']) && $_GET['semana'] !== '' ? (int)$_GET['semana'] : null;
+            $mes = $_GET['mes'] ?? null;
+            $mes = $_GET['mes'] ?? null;
             $plataforma = $_GET['plataforma'] ?? null;
             $sentiment = $_GET['sentiment'] ?? null;
             $tipo = $_GET['tipo'] ?? null;
@@ -55,6 +131,10 @@ class MetricsController
                 if ($pilar !== 'Influencers') { // Influencers es solo pago
                     $where = [];
                     $params = [];
+                    if ($mes) {
+                        $where[] = 'mes = :mes';
+                        $params['mes'] = $mes;
+                    }
 
                     if ($semana !== null) {
                         $where[] = 'semana = :semana';
@@ -106,6 +186,10 @@ class MetricsController
                 if ($pilar !== 'Kiosco') { // Kiosco es solo orgánico
                     $where = [];
                     $params = [];
+                    if ($mes) {
+                        $where[] = 'mes = :mes';
+                        $params['mes'] = $mes;
+                    }
 
                     if ($semana !== null) {
                         $where[] = 'semana = :semana';
@@ -173,6 +257,8 @@ class MetricsController
         header('Content-Type: application/json');
         try {
             $semana = isset($_GET['semana']) && $_GET['semana'] !== '' ? (int)$_GET['semana'] : null;
+            $mes = $_GET['mes'] ?? null;
+            $mes = $_GET['mes'] ?? null;
             $plataforma = $_GET['plataforma'] ?? null;
             $sentiment = $_GET['sentiment'] ?? null;
             $tipo = $_GET['tipo'] ?? null;
@@ -186,6 +272,10 @@ class MetricsController
                 if ($pilar !== 'Influencers') {
                     $where = [];
                     $params = [];
+                    if ($mes) {
+                        $where[] = 'mes = :mes';
+                        $params['mes'] = $mes;
+                    }
                     if ($plataforma) {
                         $where[] = 'plataforma = :plataforma';
                         $params['plataforma'] = $plataforma;
@@ -202,12 +292,12 @@ class MetricsController
 
                     $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
                     $sql = "SELECT 
-                                semana,
+                                mes, semana,
                                 COUNT(*) as count,
                                 SUM(likes + compartidos + comentarios + guardados) as engagement
                             FROM organic_campaign
                             $whereSql
-                            GROUP BY semana";
+                            GROUP BY mes, semana";
                     $stmt = $connection->prepare($sql);
                     $stmt->execute($params);
                     $orgWeeks = $stmt->fetchAll();
@@ -219,6 +309,10 @@ class MetricsController
                 if ($pilar !== 'Kiosco') {
                     $where = [];
                     $params = [];
+                    if ($mes) {
+                        $where[] = 'mes = :mes';
+                        $params['mes'] = $mes;
+                    }
                     if ($plataforma) {
                         $where[] = 'plataforma = :plataforma';
                         $params['plataforma'] = $plataforma;
@@ -235,24 +329,35 @@ class MetricsController
 
                     $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
                     $sql = "SELECT 
-                                semana,
+                                mes, semana,
                                 COUNT(*) as count,
                                 SUM(likes + compartidos + comentarios + guardados) as engagement
                             FROM paid_campaign
                             $whereSql
-                            GROUP BY semana";
+                            GROUP BY mes, semana";
                     $stmt = $connection->prepare($sql);
                     $stmt->execute($params);
                     $paidWeeks = $stmt->fetchAll();
                 }
             }
 
+            // Helper for sorting months correctly
+            $monthOrder = [
+                'Enero' => 1, 'Febrero' => 2, 'Marzo' => 3, 'Abril' => 4,
+                'Mayo' => 5, 'Junio' => 6, 'Julio' => 7, 'Agosto' => 8,
+                'Septiembre' => 9, 'Octubre' => 10, 'Noviembre' => 11, 'Diciembre' => 12
+            ];
+
             // Merge weekly data
             $weeklyData = [];
             foreach ($orgWeeks as $row) {
+                $m = $row['mes'];
                 $w = (int)$row['semana'];
-                $weeklyData[$w] = [
-                    'semana' => $w,
+                $mNum = $monthOrder[$m] ?? 99;
+                $key = sprintf("%02d-%02d", $mNum, $w);
+                $label = $mes ? $w : "$w ($m)";
+                $weeklyData[$key] = [
+                    'semana' => $label,
                     'organic_mentions' => (int)$row['count'],
                     'organic_engagement' => (int)($row['engagement'] ?? 0),
                     'paid_mentions' => 0,
@@ -260,18 +365,22 @@ class MetricsController
                 ];
             }
             foreach ($paidWeeks as $row) {
+                $m = $row['mes'];
                 $w = (int)$row['semana'];
-                if (!isset($weeklyData[$w])) {
-                    $weeklyData[$w] = [
-                        'semana' => $w,
+                $mNum = $monthOrder[$m] ?? 99;
+                $key = sprintf("%02d-%02d", $mNum, $w);
+                $label = $mes ? $w : "$w ($m)";
+                if (!isset($weeklyData[$key])) {
+                    $weeklyData[$key] = [
+                        'semana' => $label,
                         'organic_mentions' => 0,
                         'organic_engagement' => 0,
                         'paid_mentions' => (int)$row['count'],
                         'paid_engagement' => (int)($row['engagement'] ?? 0)
                     ];
                 } else {
-                    $weeklyData[$w]['paid_mentions'] = (int)$row['count'];
-                    $weeklyData[$w]['paid_engagement'] = (int)($row['engagement'] ?? 0);
+                    $weeklyData[$key]['paid_mentions'] = (int)$row['count'];
+                    $weeklyData[$key]['paid_engagement'] = (int)($row['engagement'] ?? 0);
                 }
             }
             ksort($weeklyData);
@@ -284,6 +393,10 @@ class MetricsController
                 if ($pilar !== 'Influencers') {
                     $where = [];
                     $params = [];
+                    if ($mes) {
+                        $where[] = 'mes = :mes';
+                        $params['mes'] = $mes;
+                    }
                     if ($semana !== null) {
                         $where[] = 'semana = :semana';
                         $params['semana'] = $semana;
@@ -315,6 +428,10 @@ class MetricsController
                 if ($pilar !== 'Kiosco') {
                     $where = [];
                     $params = [];
+                    if ($mes) {
+                        $where[] = 'mes = :mes';
+                        $params['mes'] = $mes;
+                    }
                     if ($semana !== null) {
                         $where[] = 'semana = :semana';
                         $params['semana'] = $semana;
@@ -350,6 +467,10 @@ class MetricsController
             if ($tipo === null || strtolower($tipo) === 'organic') {
                 $where = [];
                 $params = [];
+                    if ($mes) {
+                        $where[] = 'mes = :mes';
+                        $params['mes'] = $mes;
+                    }
                 if ($semana !== null) {
                     $where[] = 'semana = :semana';
                     $params['semana'] = $semana;
@@ -378,6 +499,10 @@ class MetricsController
             if ($tipo === null || strtolower($tipo) === 'paid') {
                 $where = [];
                 $params = [];
+                    if ($mes) {
+                        $where[] = 'mes = :mes';
+                        $params['mes'] = $mes;
+                    }
                 if ($semana !== null) {
                     $where[] = 'semana = :semana';
                     $params['semana'] = $semana;
@@ -424,6 +549,8 @@ class MetricsController
         header('Content-Type: application/json');
         try {
             $semana = isset($_GET['semana']) && $_GET['semana'] !== '' ? (int)$_GET['semana'] : null;
+            $mes = $_GET['mes'] ?? null;
+            $mes = $_GET['mes'] ?? null;
             $plataforma = $_GET['plataforma'] ?? null;
             $sentiment = $_GET['sentiment'] ?? null;
             $tipo = $_GET['tipo'] ?? null;
@@ -437,6 +564,10 @@ class MetricsController
                 if ($pilar !== 'Influencers') {
                     $where = [];
                     $params = [];
+                    if ($mes) {
+                        $where[] = 'mes = :mes';
+                        $params['mes'] = $mes;
+                    }
                     if ($semana !== null) {
                         $where[] = 'semana = :semana';
                         $params['semana'] = $semana;
@@ -465,6 +596,7 @@ class MetricsController
                             'id' => 'org_' . $row['id'],
                             'mencion_id' => (int)$row['mencion_id'],
                             'semana' => (int)$row['semana'],
+                            'mes' => $row['mes'],
                             'usuario' => $row['usuario'],
                             'plataforma' => $row['plataforma'],
                             'link_publicacion' => $row['link_publicacion'],
@@ -487,6 +619,10 @@ class MetricsController
                 if ($pilar !== 'Kiosco') {
                     $where = [];
                     $params = [];
+                    if ($mes) {
+                        $where[] = 'mes = :mes';
+                        $params['mes'] = $mes;
+                    }
                     if ($semana !== null) {
                         $where[] = 'semana = :semana';
                         $params['semana'] = $semana;
@@ -515,6 +651,7 @@ class MetricsController
                             'id' => 'paid_' . $row['id'],
                             'mencion_id' => (int)$row['mencion_id'],
                             'semana' => (int)$row['semana'],
+                            'mes' => $row['mes'],
                             'usuario' => $row['usuario'],
                             'plataforma' => $row['plataforma'],
                             'link_publicacion' => $row['link_publicacion'],

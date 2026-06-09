@@ -19,14 +19,6 @@ class ReportGenerator
     {
         $connection = $this->db->getConnection();
 
-        $stmt = $connection->query('SELECT month, year FROM report_metadata LIMIT 1');
-        $meta = $stmt->fetch();
-        if (!$meta) {
-            return null;
-        }
-        $month = $meta['month'];
-        $year = (int)$meta['year'];
-
         $stmtOrg = $connection->query('SELECT * FROM organic_campaign');
         $organicRecords = $stmtOrg->fetchAll();
 
@@ -36,6 +28,18 @@ class ReportGenerator
         if (count($organicRecords) === 0 && count($paidRecords) === 0) {
             return null;
         }
+
+        // Determine months from data
+        $monthsSet = [];
+        foreach ($organicRecords as $r) {
+            if (!empty($r['mes'])) $monthsSet[$r['mes']] = true;
+        }
+        foreach ($paidRecords as $r) {
+            if (!empty($r['mes'])) $monthsSet[$r['mes']] = true;
+        }
+        $months = array_keys($monthsSet);
+        $monthStr = !empty($months) ? implode(', ', $months) : 'Varios Meses';
+        $year = date('Y'); // Assume current year or could be parsed too, sticking to current year for V2
 
         $phpWord = new PhpWord();
         $phpWord->setDefaultFontName('Arial');
@@ -81,11 +85,11 @@ class ReportGenerator
             $section->addTextBreak(1);
         }
 
-        $section->addText("Informe de Campaña: Mogul 360", [
+        $section->addText("Reporte de Campaña Mogul 360º", [
             'name' => 'Arial', 'size' => 22, 'bold' => true, 'color' => $darkBlue
         ], ['align' => 'center']);
 
-        $section->addText("Reporte de Métricas Consolidadas – {$month} {$year}", [
+        $section->addText("Reporte de Métricas Consolidadas – {$monthStr} {$year}", [
             'name' => 'Arial', 'size' => 14, 'italic' => true, 'color' => '4B5563'
         ], ['align' => 'center']);
 

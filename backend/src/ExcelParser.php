@@ -11,6 +11,21 @@ use Exception;
 
 class ExcelParser
 {
+    private const MONTH_MAP = [
+        1 => 'Enero',
+        2 => 'Febrero',
+        3 => 'Marzo',
+        4 => 'Abril',
+        5 => 'Mayo',
+        6 => 'Junio',
+        7 => 'Julio',
+        8 => 'Agosto',
+        9 => 'Septiembre',
+        10 => 'Octubre',
+        11 => 'Noviembre',
+        12 => 'Diciembre'
+    ];
+
     public function __construct(
         private readonly Database $db
     ) {}
@@ -47,10 +62,10 @@ class ExcelParser
             $connection->exec('DELETE FROM paid_campaign');
 
             $sqlOrganic = 'INSERT INTO organic_campaign (
-                mencion_id, semana, usuario, plataforma, link_publicacion, categoria_perfil,
+                mencion_id, semana, mes, usuario, plataforma, link_publicacion, categoria_perfil,
                 views_semana, aumento_views, likes, compartidos, comentarios, guardados, sentiment
             ) VALUES (
-                :mencion_id, :semana, :usuario, :plataforma, :link_publicacion, :categoria_perfil,
+                :mencion_id, :semana, :mes, :usuario, :plataforma, :link_publicacion, :categoria_perfil,
                 :views_semana, :aumento_views, :likes, :compartidos, :comentarios, :guardados, :sentiment
             )';
             $stmtOrganic = $connection->prepare($sqlOrganic);
@@ -59,10 +74,10 @@ class ExcelParser
             }
 
             $sqlPaid = 'INSERT INTO paid_campaign (
-                mencion_id, semana, usuario, plataforma, link_publicacion, categoria,
+                mencion_id, semana, mes, usuario, plataforma, link_publicacion, categoria,
                 views_semana, aumento_views, likes, compartidos, comentarios, guardados, sentiment
             ) VALUES (
-                :mencion_id, :semana, :usuario, :plataforma, :link_publicacion, :categoria,
+                :mencion_id, :semana, :mes, :usuario, :plataforma, :link_publicacion, :categoria,
                 :views_semana, :aumento_views, :likes, :compartidos, :comentarios, :guardados, :sentiment
             )';
             $stmtPaid = $connection->prepare($sqlPaid);
@@ -118,6 +133,10 @@ class ExcelParser
             }
             $mencionId = $mencionKey ? $this->parseMetric($row[$mencionKey]) : 0;
 
+            $mesKey = $this->findKeyByHeader($headers, 'Mes');
+            $mesNum = $mesKey ? (int)$row[$mesKey] : 0;
+            $mes = self::MONTH_MAP[$mesNum] ?? 'Desconocido';
+
             $semanaKey = $this->findKeyByHeader($headers, 'Semana');
             $semana = $semanaKey ? $this->parseMetric($row[$semanaKey]) : 0;
 
@@ -127,16 +146,12 @@ class ExcelParser
             $plataformaKey = $this->findKeyByHeader($headers, 'Plataforma');
             $plataforma = $plataformaKey ? $this->cleanString($row[$plataformaKey]) : '';
 
-            if ($isOrganic) {
-                $catKey = $this->findKeyByHeader($headers, "Categoría de\nPerfil");
-                if (!$catKey) {
-                    $catKey = $this->findKeyByHeader($headers, "Categoría de Perfil");
-                }
-                $categoriaPerfil = $catKey ? $this->cleanString($row[$catKey]) : '';
-            } else {
-                $catKey = $this->findKeyByHeader($headers, 'Categoría');
-                $categoria = $catKey ? $this->cleanString($row[$catKey]) : '';
+            $catKey = $this->findKeyByHeader($headers, "Categoría de\nPerfil");
+            if (!$catKey) {
+                $catKey = $this->findKeyByHeader($headers, "Categoría de Perfil");
             }
+            // En V2, tanto orgánico como pagos usan "Categoría de Perfil" para el Pilar
+            $pilar = $catKey ? $this->cleanString($row[$catKey]) : '';
 
             $viewsKey = $this->findKeyByHeader($headers, 'Views semana actual');
             $viewsSemana = $viewsKey ? $this->parseMetric($row[$viewsKey]) : 0;
@@ -171,6 +186,7 @@ class ExcelParser
             $record = [
                 'mencion_id' => $mencionId,
                 'semana' => $semana,
+                'mes' => $mes,
                 'usuario' => $usuario,
                 'plataforma' => $plataforma,
                 'link_publicacion' => $link,
@@ -184,9 +200,9 @@ class ExcelParser
             ];
 
             if ($isOrganic) {
-                $record['categoria_perfil'] = $categoriaPerfil;
+                $record['categoria_perfil'] = $pilar;
             } else {
-                $record['categoria'] = $categoria;
+                $record['categoria'] = $pilar;
             }
 
             $records[] = $record;

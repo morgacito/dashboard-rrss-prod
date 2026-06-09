@@ -28,13 +28,7 @@ class UploadController
         $month = $_POST['month'] ?? '';
         $yearVal = $_POST['year'] ?? '';
 
-        if (empty($month) || empty($yearVal)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Faltan datos de mes o año.'], JSON_UNESCAPED_UNICODE);
-            return;
-        }
-
-        $year = intval($yearVal);
+        $year = $yearVal !== '' ? intval($yearVal) : 0;
 
         if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
             http_response_code(400);
