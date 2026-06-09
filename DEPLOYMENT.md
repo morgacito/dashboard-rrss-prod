@@ -72,22 +72,21 @@ o un cliente FTP (FileZilla, WinSCP, etc.).
 ### 2.2 — Configurar variables de entorno
 
 Abra el archivo `backend/.htaccess` con el editor de texto del
-Administrador de Archivos y añada estas líneas **al inicio del archivo**,
-reemplazando los valores de ejemplo con los datos reales de su base de datos:
+Administrador de Archivos (o con cualquier editor de texto plano).
 
-```apache
-SetEnv DB_HOST      127.0.0.1
-SetEnv DB_NAME      social_dashboard
-SetEnv DB_USER      dashboard_user
-SetEnv DB_PASSWORD  CONTRASEÑA_SEGURA
-SetEnv UPLOAD_PASSWORD mogul360secret
-```
+El archivo ya viene con valores por defecto listos para usar. Si su servidor
+utiliza una configuración de base de datos diferente, actualice los valores
+correspondientes:
 
-Guarde el archivo.
+| Variable | Valor por defecto | Descripción |
+|---|---|---|
+| `DB_HOST` | `127.0.0.1` | Host de la base de datos (no cambiar en hosting estándar) |
+| `DB_NAME` | `social_dashboard` | Nombre de la base de datos creada en el Paso 1 |
+| `DB_USER` | `dashboard_user` | Usuario de base de datos creado en el Paso 1 |
+| `DB_PASSWORD` | `dashboard_pass` | Contraseña del usuario — **se recomienda cambiarla** |
+| `UPLOAD_PASSWORD` | `mogul360secret` | Clave para subir reportes Excel — **se recomienda cambiarla** |
 
-> **Nota:** `UPLOAD_PASSWORD` es la clave que el usuario del dashboard
-> debe ingresar para subir reportes Excel. Puede cambiarla por cualquier
-> valor que prefiera.
+Guarde el archivo una vez revisados los valores.
 
 ---
 
@@ -136,13 +135,13 @@ descargue un archivo `.docx` con los datos del reporte.
 
 ## Variables de entorno — referencia rápida
 
-| Variable | Descripción | Ejemplo |
-|---|---|---|
-| `DB_HOST` | Host del servidor de base de datos | `127.0.0.1` |
-| `DB_NAME` | Nombre de la base de datos | `social_dashboard` |
-| `DB_USER` | Usuario de la base de datos | `dashboard_user` |
-| `DB_PASSWORD` | Contraseña del usuario DB | `CONTRASEÑA_SEGURA` |
-| `UPLOAD_PASSWORD` | Clave para autorizar la carga de Excel | `mogul360secret` |
+| Variable | Descripción |
+|---|---|
+| `DB_HOST` | Host del servidor de base de datos (usualmente `127.0.0.1`) |
+| `DB_NAME` | Nombre de la base de datos creada en el Paso 1 |
+| `DB_USER` | Usuario de la base de datos creado en el Paso 1 |
+| `DB_PASSWORD` | Contraseña del usuario de base de datos |
+| `UPLOAD_PASSWORD` | Clave para autorizar la carga de archivos Excel. Defina un valor propio y seguro. |
 
 ---
 

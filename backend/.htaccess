@@ -1,3 +1,16 @@
+# ==============================================================================
+# Variables de entorno — Complete con los valores reales de su servidor
+# Se recomienda cambiar DB_PASSWORD y UPLOAD_PASSWORD antes de poner en produccion
+# ==============================================================================
+SetEnv DB_HOST      127.0.0.1
+SetEnv DB_NAME      social_dashboard
+SetEnv DB_USER      dashboard_user
+SetEnv DB_PASSWORD  dashboard_pass
+SetEnv UPLOAD_PASSWORD mogul360secret
+
+# ==============================================================================
+# Enrutamiento — No modificar
+# ==============================================================================
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
