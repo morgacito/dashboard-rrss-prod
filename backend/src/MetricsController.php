@@ -16,8 +16,7 @@ class MetricsController
     {
         header('Content-Type: application/json');
         try {
-            $connection = $this->db->getConnection();
-            $stmt = $connection->query('SELECT month, year FROM report_metadata LIMIT 1');
+            $stmt = $this->db->query('SELECT month, year FROM report_metadata LIMIT 1');
             $meta = $stmt->fetch();
 
             $month = $meta['month'] ?? '';
@@ -25,10 +24,10 @@ class MetricsController
 
             // Si no hay metadatos, intentamos obtener el mes de los datos reales
             if (empty($month)) {
-                $stmt = $connection->query('SELECT mes FROM organic_campaign LIMIT 1');
+                $stmt = $this->db->query('SELECT mes FROM organic_campaign LIMIT 1');
                 $month = $stmt->fetchColumn() ?: '';
                 if (empty($month)) {
-                    $stmt = $connection->query('SELECT mes FROM paid_campaign LIMIT 1');
+                    $stmt = $this->db->query('SELECT mes FROM paid_campaign LIMIT 1');
                     $month = $stmt->fetchColumn() ?: '';
                 }
             }
@@ -50,7 +49,6 @@ class MetricsController
 
     public function getFilters(): void
     {
-        $connection = $this->db->getConnection();
         try {
             $sql = "SELECT DISTINCT mes, semana FROM (
                         SELECT mes, semana FROM organic_campaign
@@ -58,7 +56,7 @@ class MetricsController
                         SELECT mes, semana FROM paid_campaign
                     ) as combined
                     ORDER BY mes, semana";
-            $stmt = $connection->query($sql);
+            $stmt = $this->db->query($sql);
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             $meses = [];
@@ -115,7 +113,6 @@ class MetricsController
         try {
             $semana = isset($_GET['semana']) && $_GET['semana'] !== '' ? (int)$_GET['semana'] : null;
             $mes = $_GET['mes'] ?? null;
-            $mes = $_GET['mes'] ?? null;
             $plataforma = $_GET['plataforma'] ?? null;
             $sentiment = $_GET['sentiment'] ?? null;
             $tipo = $_GET['tipo'] ?? null;
@@ -123,8 +120,6 @@ class MetricsController
 
             $orgSummary = ['count' => 0, 'likes' => 0, 'shares' => 0, 'saves' => 0, 'comments' => 0, 'views' => 0];
             $paidSummary = ['count' => 0, 'likes' => 0, 'shares' => 0, 'saves' => 0, 'comments' => 0, 'views' => 0];
-
-            $connection = $this->db->getConnection();
 
             // 1. Organic summary
             if ($tipo === null || strtolower($tipo) === 'organic') {
@@ -165,8 +160,7 @@ class MetricsController
                             FROM organic_campaign
                             $whereSql";
                     
-                    $stmt = $connection->prepare($sql);
-                    $stmt->execute($params);
+                    $stmt = $this->db->query($sql, $params);
                     $res = $stmt->fetch();
                     if ($res && $res['count'] > 0) {
                         $orgSummary = [
@@ -220,8 +214,7 @@ class MetricsController
                             FROM paid_campaign
                             $whereSql";
                     
-                    $stmt = $connection->prepare($sql);
-                    $stmt->execute($params);
+                    $stmt = $this->db->query($sql, $params);
                     $res = $stmt->fetch();
                     if ($res && $res['count'] > 0) {
                         $paidSummary = [
@@ -258,13 +251,10 @@ class MetricsController
         try {
             $semana = isset($_GET['semana']) && $_GET['semana'] !== '' ? (int)$_GET['semana'] : null;
             $mes = $_GET['mes'] ?? null;
-            $mes = $_GET['mes'] ?? null;
             $plataforma = $_GET['plataforma'] ?? null;
             $sentiment = $_GET['sentiment'] ?? null;
             $tipo = $_GET['tipo'] ?? null;
             $pilar = $_GET['pilar'] ?? null;
-
-            $connection = $this->db->getConnection();
 
             // 1. Weekly evolution (mentions and engagement)
             $orgWeeks = [];
@@ -298,8 +288,7 @@ class MetricsController
                             FROM organic_campaign
                             $whereSql
                             GROUP BY mes, semana";
-                    $stmt = $connection->prepare($sql);
-                    $stmt->execute($params);
+                    $stmt = $this->db->query($sql, $params);
                     $orgWeeks = $stmt->fetchAll();
                 }
             }
@@ -335,8 +324,7 @@ class MetricsController
                             FROM paid_campaign
                             $whereSql
                             GROUP BY mes, semana";
-                    $stmt = $connection->prepare($sql);
-                    $stmt->execute($params);
+                    $stmt = $this->db->query($sql, $params);
                     $paidWeeks = $stmt->fetchAll();
                 }
             }
@@ -413,8 +401,7 @@ class MetricsController
 
                     $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
                     $sql = "SELECT sentiment, COUNT(*) as count FROM organic_campaign $whereSql GROUP BY sentiment";
-                    $stmt = $connection->prepare($sql);
-                    $stmt->execute($params);
+                    $stmt = $this->db->query($sql, $params);
                     foreach ($stmt->fetchAll() as $row) {
                         $sent = strtoupper(trim($row['sentiment']));
                         if (isset($sentimentsCount[$sent])) {
@@ -448,8 +435,7 @@ class MetricsController
 
                     $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
                     $sql = "SELECT sentiment, COUNT(*) as count FROM paid_campaign $whereSql GROUP BY sentiment";
-                    $stmt = $connection->prepare($sql);
-                    $stmt->execute($params);
+                    $stmt = $this->db->query($sql, $params);
                     foreach ($stmt->fetchAll() as $row) {
                         $sent = strtoupper(trim($row['sentiment']));
                         if (isset($sentimentsCount[$sent])) {
@@ -486,13 +472,11 @@ class MetricsController
 
                 $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
                 $sqlKiosco = "SELECT COUNT(*) FROM organic_campaign $whereSql " . (count($where) > 0 ? 'AND' : 'WHERE') . " categoria_perfil = 'Kiosco'";
-                $stmt = $connection->prepare($sqlKiosco);
-                $stmt->execute($params);
+                $stmt = $this->db->query($sqlKiosco, $params);
                 $kioscoCount = (int)$stmt->fetchColumn();
 
                 $sqlUgc = "SELECT COUNT(*) FROM organic_campaign $whereSql " . (count($where) > 0 ? 'AND' : 'WHERE') . " categoria_perfil != 'Kiosco'";
-                $stmt = $connection->prepare($sqlUgc);
-                $stmt->execute($params);
+                $stmt = $this->db->query($sqlUgc, $params);
                 $ugcCount += (int)$stmt->fetchColumn();
             }
 
@@ -519,13 +503,11 @@ class MetricsController
                 $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
                 
                 $sqlUgcPaid = "SELECT COUNT(*) FROM paid_campaign $whereSql " . (count($where) > 0 ? 'AND' : 'WHERE') . " categoria = 'CANJE'";
-                $stmt = $connection->prepare($sqlUgcPaid);
-                $stmt->execute($params);
+                $stmt = $this->db->query($sqlUgcPaid, $params);
                 $ugcCount += (int)$stmt->fetchColumn();
 
                 $sqlInf = "SELECT COUNT(*) FROM paid_campaign $whereSql " . (count($where) > 0 ? 'AND' : 'WHERE') . " categoria = 'PRESUPUESTO'";
-                $stmt = $connection->prepare($sqlInf);
-                $stmt->execute($params);
+                $stmt = $this->db->query($sqlInf, $params);
                 $influencersCount = (int)$stmt->fetchColumn();
             }
 
@@ -550,14 +532,12 @@ class MetricsController
         try {
             $semana = isset($_GET['semana']) && $_GET['semana'] !== '' ? (int)$_GET['semana'] : null;
             $mes = $_GET['mes'] ?? null;
-            $mes = $_GET['mes'] ?? null;
             $plataforma = $_GET['plataforma'] ?? null;
             $sentiment = $_GET['sentiment'] ?? null;
             $tipo = $_GET['tipo'] ?? null;
             $pilar = $_GET['pilar'] ?? null;
 
             $records = [];
-            $connection = $this->db->getConnection();
 
             // 1. Fetch Organic
             if ($tipo === null || strtolower($tipo) === 'organic') {
@@ -588,8 +568,7 @@ class MetricsController
 
                     $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
                     $sql = "SELECT * FROM organic_campaign $whereSql";
-                    $stmt = $connection->prepare($sql);
-                    $stmt->execute($params);
+                    $stmt = $this->db->query($sql, $params);
 
                     foreach ($stmt->fetchAll() as $row) {
                         $records[] = [
@@ -643,8 +622,7 @@ class MetricsController
  
                     $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
                     $sql = "SELECT * FROM paid_campaign $whereSql";
-                    $stmt = $connection->prepare($sql);
-                    $stmt->execute($params);
+                    $stmt = $this->db->query($sql, $params);
  
                     foreach ($stmt->fetchAll() as $row) {
                         $records[] = [

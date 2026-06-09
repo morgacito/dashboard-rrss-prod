@@ -58,6 +58,7 @@ class ExcelParser
         try {
             $connection->beginTransaction();
 
+            $startDb = microtime(true);
             $connection->exec('DELETE FROM organic_campaign');
             $connection->exec('DELETE FROM paid_campaign');
 
@@ -86,6 +87,16 @@ class ExcelParser
             }
 
             $connection->commit();
+            
+            // Registramos el tiempo manualmente en la instancia de Database
+            $duration = (microtime(true) - $startDb) * 1000;
+            // Hack para inyectar el tiempo si no queremos cambiar la visibilidad de totalQueryTime
+            // Pero como soy el autor, puedo añadir un método o cambiarlo a protected/public.
+            // Optaré por añadir un método addQueryTime.
+            if (method_exists($this->db, 'addQueryTime')) {
+                $this->db->addQueryTime($duration);
+            }
+            
             return true;
         } catch (Exception $e) {
             $connection->rollBack();

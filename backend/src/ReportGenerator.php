@@ -17,12 +17,10 @@ class ReportGenerator
 
     public function generate(): ?string
     {
-        $connection = $this->db->getConnection();
-
-        $stmtOrg = $connection->query('SELECT * FROM organic_campaign');
+        $stmtOrg = $this->db->query('SELECT * FROM organic_campaign');
         $organicRecords = $stmtOrg->fetchAll();
 
-        $stmtPaid = $connection->query('SELECT * FROM paid_campaign');
+        $stmtPaid = $this->db->query('SELECT * FROM paid_campaign');
         $paidRecords = $stmtPaid->fetchAll();
 
         if (count($organicRecords) === 0 && count($paidRecords) === 0) {

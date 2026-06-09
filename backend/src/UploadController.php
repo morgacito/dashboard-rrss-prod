@@ -43,11 +43,9 @@ class UploadController
             $parser = new ExcelParser($this->db);
             $parser->parseAndSave($tmpName);
 
-            $connection = $this->db->getConnection();
-            $connection->exec('DELETE FROM report_metadata');
+            $this->db->query('DELETE FROM report_metadata');
 
-            $stmt = $connection->prepare('INSERT INTO report_metadata (month, year) VALUES (:month, :year)');
-            $stmt->execute([
+            $this->db->query('INSERT INTO report_metadata (month, year) VALUES (:month, :year)', [
                 'month' => $month,
                 'year' => $year
             ]);
