@@ -21,7 +21,6 @@ class Router
     public function dispatch(string $uri, string $method): void
     {
         $start = microtime(true);
-        ob_start();
         
         $parsedUrl = parse_url($uri);
         $path = $parsedUrl['path'] ?? '/';
@@ -38,7 +37,6 @@ class Router
 
         if ($method === 'OPTIONS') {
             http_response_code(204);
-            ob_end_flush();
             return;
         }
 
@@ -51,8 +49,6 @@ class Router
             header('Content-Type: application/json');
             echo json_encode(['error' => 'Not Found']);
         }
-
-        ob_end_flush();
 
         $this->lastResponseTime = (microtime(true) - $start) * 1000;
         header("X-Response-Time: " . number_format($this->lastResponseTime, 2) . "ms");

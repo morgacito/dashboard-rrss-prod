@@ -7,13 +7,13 @@
     SetEnv DB_HOST      127.0.0.1
 </If>
 <If "-z env('DB_NAME')">
-    SetEnv DB_NAME      social_dashboard
+    SetEnv DB_NAME      544837_social_dashboard
 </If>
 <If "-z env('DB_USER')">
-    SetEnv DB_USER      dashboard_user
+    SetEnv DB_USER      544837_sistema
 </If>
 <If "-z env('DB_PASSWORD')">
-    SetEnv DB_PASSWORD  dashboard_pass
+    SetEnv DB_PASSWORD  Systemas1856
 </If>
 <If "-z env('UPLOAD_PASSWORD')">
     SetEnv UPLOAD_PASSWORD mogul360secret
@@ -26,3 +26,4 @@ RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]
+

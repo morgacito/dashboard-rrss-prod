@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+ob_start();
+
 require_once __DIR__ . '/vendor/autoload.php';
 
 use App\Database;
@@ -54,11 +56,6 @@ $router->post('/api/upload', function() use ($db) {
     $controller->upload();
 });
 
-$uri = $_SERVER['REQUEST_URI'] ?? '/';
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-
-$router->dispatch($uri, $method);
-
 // Registro de performance para diagnóstico
 $responseTime = $router->getLastResponseTime();
 $dbConnTime = $db->getConnectionTime();
@@ -66,6 +63,11 @@ $dbQueryTime = $db->getTotalQueryTime();
 
 header("X-DB-Conn-Time: " . number_format($dbConnTime, 2) . "ms");
 header("X-DB-Query-Time: " . number_format($dbQueryTime, 2) . "ms");
+
+$uri = $_SERVER['REQUEST_URI'] ?? '/';
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
+$router->dispatch($uri, $method);
 
 $path = parse_url($uri)['path'] ?? '/';
 if (str_starts_with($path, '/api/')) {
@@ -84,3 +86,5 @@ if (str_starts_with($path, '/api/')) {
     );
     file_put_contents($logDir . '/performance.log', $logEntry, FILE_APPEND);
 }
+
+ob_end_flush();
