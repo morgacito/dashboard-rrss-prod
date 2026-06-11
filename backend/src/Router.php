@@ -27,6 +27,14 @@ class Router
         $parsedUrl = parse_url($uri);
         $path = $parsedUrl['path'] ?? '/';
 
+        // Si la peticion viene bajo el subdirectorio /backend (tipico de despliegue en produccion)
+        // removemos el prefijo "/backend" para que coincida con las rutas estandar (/api/...)
+        if (str_starts_with($path, '/backend/')) {
+            $path = substr($path, 8); // conserva el slash inicial, ej: /backend/api -> /api
+        } elseif ($path === '/backend') {
+            $path = '/';
+        }
+
         $this->handleCors();
 
         if ($method === 'OPTIONS') {
