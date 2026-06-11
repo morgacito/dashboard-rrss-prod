@@ -1,0 +1,28 @@
+# ==============================================================================
+# Variables de entorno — Configuración de Base de Datos
+# Estas variables se establecen solo si no están definidas previamente (ej. por Docker)
+# para asegurar compatibilidad entre entornos de desarrollo y producción.
+# ==============================================================================
+<If "-z env('DB_HOST')">
+    SetEnv DB_HOST      127.0.0.1
+</If>
+<If "-z env('DB_NAME')">
+    SetEnv DB_NAME      social_dashboard
+</If>
+<If "-z env('DB_USER')">
+    SetEnv DB_USER      dashboard_user
+</If>
+<If "-z env('DB_PASSWORD')">
+    SetEnv DB_PASSWORD  dashboard_pass
+</If>
+<If "-z env('UPLOAD_PASSWORD')">
+    SetEnv UPLOAD_PASSWORD mogul360secret
+</If>
+
+# ==============================================================================
+# Enrutamiento — No modificar
+# ==============================================================================
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]

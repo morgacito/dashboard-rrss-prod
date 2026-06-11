@@ -1,0 +1,7 @@
+vendor/
+data/
+.phpunit.cache/
+.pytest_cache/
+__pycache__/
+*.log
+.env
