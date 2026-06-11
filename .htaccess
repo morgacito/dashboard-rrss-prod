@@ -1,0 +1,22 @@
+# ==============================================================================
+# Social Dashboard — Configuración del servidor web (raíz)
+# Requiere Apache con mod_rewrite habilitado.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Enrutamiento de la SPA (Single Page Application)
+# Todas las rutas que NO correspondan a un archivo o directorio físico
+# se redirigen a index.html para que React Router las gestione.
+# Las rutas que comienzan con /backend/ se excluyen explícitamente.
+# ------------------------------------------------------------------------------
+RewriteEngine On
+
+# No redirigir llamadas a la carpeta del backend
+RewriteCond %{REQUEST_URI} !^/backend/
+
+# No redirigir si el recurso existe físicamente (archivos estáticos: JS, CSS, imágenes, etc.)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Todo lo demás → index.html (React Router se encarga del resto)
+RewriteRule ^ index.html [QSA,L]
