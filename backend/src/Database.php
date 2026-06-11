@@ -18,10 +18,10 @@ class Database
         private ?string $password = null,
         private ?string $dbname = null
     ) {
-        $this->host = $host ?? getenv('DB_HOST') ?: '127.0.0.1';
-        $this->username = $username ?? getenv('DB_USER') ?: 'root';
-        $this->password = $password ?? getenv('DB_PASSWORD') ?: '';
-        $this->dbname = $dbname ?? getenv('DB_NAME') ?: '';
+        $this->host = $host ?? $_SERVER['DB_HOST'] ?? getenv('DB_HOST') ?: '127.0.0.1';
+        $this->username = $username ?? $_SERVER['DB_USER'] ?? getenv('DB_USER') ?: 'root';
+        $this->password = $password ?? $_SERVER['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?: '';
+        $this->dbname = $dbname ?? $_SERVER['DB_NAME'] ?? getenv('DB_NAME') ?: '';
     }
 
     public function getConnection(): PDO

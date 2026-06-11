@@ -17,7 +17,7 @@ class UploadController
         header('Content-Type: application/json');
 
         $passwordHeader = $_SERVER['HTTP_X_UPLOAD_PASSWORD'] ?? '';
-        $uploadPassword = getenv('UPLOAD_PASSWORD') ?: 'mogul360secret';
+        $uploadPassword = $_SERVER['UPLOAD_PASSWORD'] ?? getenv('UPLOAD_PASSWORD') ?: 'mogul360secret';
 
         if (empty($passwordHeader) || $passwordHeader !== $uploadPassword) {
             http_response_code(401);
