@@ -84,7 +84,7 @@ Options -Indexes
     RewriteEngine On
 
     # No redirigir llamadas a la API del backend
-    RewriteCond %{REQUEST_URI} !^/backend/
+    RewriteCond %{REQUEST_URI} !^/backend(/|$)
 
     # No redirigir si el recurso existe físicamente (JS, CSS, imágenes, etc.)
     RewriteCond %{REQUEST_FILENAME} !-f

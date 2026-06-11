@@ -59,8 +59,8 @@
 
 Suba el contenido de la carpeta `backend/` del release a la carpeta
 de su servidor web destinada a la API. Por ejemplo:
-- `/public_html/backend/` (si el dashboard vive en la raíz del dominio)
-- `/public_html/api/` (si se sirve como subdominio o subdirectorio)
+- `/web/content/backend/` (si el dashboard vive en la raíz del dominio)
+- `/web/content/api/` (si se sirve como subdominio o subdirectorio)
 
 Puede usar el **Administrador de Archivos** de su panel de control
 o un cliente FTP (FileZilla, WinSCP, etc.).
@@ -94,7 +94,7 @@ Guarde el archivo una vez revisados los valores.
 
 Suba **todos los archivos de la raíz del release** (excepto la carpeta
 `backend/` y este archivo `DEPLOYMENT.md`) al directorio raíz de documentos
-de su servidor web (por ejemplo `/public_html/`).
+de su servidor web (por ejemplo `/web/content/`).
 
 El archivo `.htaccess` de la raíz ya está incluido en el release.
 Debe subirse junto con el resto de archivos.
