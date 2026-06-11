@@ -1,7 +1,78 @@
 # ==============================================================================
 # Social Dashboard — Configuración del servidor web (raíz)
-# Requiere Apache con mod_rewrite habilitado.
+# Requiere Apache con mod_rewrite y mod_headers habilitados.
 # ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Seguridad básica
+# ------------------------------------------------------------------------------
+
+# Deshabilitar listado de directorios
+Options -Indexes
+
+# Proteger archivos sensibles de acceso directo
+<FilesMatch "(\.env|\.git|composer\.(json|lock)|package\.json|phpunit\.xml)$">
+    Require all denied
+</FilesMatch>
+
+# Headers de seguridad HTTP
+<IfModule mod_headers.c>
+    # Evitar que el sitio sea incrustado en iframes de otros dominios (clickjacking)
+    Header always set X-Frame-Options "SAMEORIGIN"
+    # Evitar que el navegador adivine el tipo de contenido (MIME sniffing)
+    Header always set X-Content-Type-Options "nosniff"
+    # Activar protección XSS en navegadores antiguos
+    Header always set X-XSS-Protection "1; mode=block"
+    # Forzar HTTPS en futuras visitas (1 año)
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    # Controlar qué información de referencia se envía
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ------------------------------------------------------------------------------
+# Compresión GZIP — reduce el tamaño de transferencia de texto
+# ------------------------------------------------------------------------------
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE application/xml image/svg+xml
+    AddOutputFilterByType DEFLATE font/woff font/woff2
+</IfModule>
+
+# ------------------------------------------------------------------------------
+# Caché de assets estáticos
+# Los archivos compilados por Vite incluyen hash en el nombre (ej: index-BQqCRTn_.js)
+# por lo que se pueden cachear de forma agresiva y segura.
+# ------------------------------------------------------------------------------
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    # HTML: sin caché (siempre verificar si hubo cambios)
+    ExpiresByType text/html "access plus 0 seconds"
+
+    # Assets con hash en el nombre: caché agresiva de 1 año
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+# Complemento de caché via headers Cache-Control
+<IfModule mod_headers.c>
+    # index.html nunca en caché
+    <FilesMatch "^index\.html$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate"
+    </FilesMatch>
+    # Assets compilados con hash: inmutables
+    <FilesMatch "\.(js|css|webp|png|jpg|jpeg|svg|ico|woff|woff2)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
 
 # ------------------------------------------------------------------------------
 # Enrutamiento de la SPA (Single Page Application)
@@ -9,14 +80,16 @@
 # se redirigen a index.html para que React Router las gestione.
 # Las rutas que comienzan con /backend/ se excluyen explícitamente.
 # ------------------------------------------------------------------------------
-RewriteEngine On
+<IfModule mod_rewrite.c>
+    RewriteEngine On
 
-# No redirigir llamadas a la carpeta del backend
-RewriteCond %{REQUEST_URI} !^/backend/
+    # No redirigir llamadas a la API del backend
+    RewriteCond %{REQUEST_URI} !^/backend/
 
-# No redirigir si el recurso existe físicamente (archivos estáticos: JS, CSS, imágenes, etc.)
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
+    # No redirigir si el recurso existe físicamente (JS, CSS, imágenes, etc.)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
 
-# Todo lo demás → index.html (React Router se encarga del resto)
-RewriteRule ^ index.html [QSA,L]
+    # Todo lo demás → index.html (React Router se encarga del resto)
+    RewriteRule ^ index.html [QSA,L]
+</IfModule>
