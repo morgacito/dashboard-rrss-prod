@@ -6,7 +6,7 @@ namespace App;
 class Router
 {
     private array $routes = [];
-    private float $lastResponseTime = 0;
+
 
     public function get(string $route, callable $callback): void
     {
@@ -20,8 +20,6 @@ class Router
 
     public function dispatch(string $uri, string $method): void
     {
-        $start = microtime(true);
-        
         $parsedUrl = parse_url($uri);
         $path = $parsedUrl['path'] ?? '/';
 
@@ -49,14 +47,6 @@ class Router
             header('Content-Type: application/json');
             echo json_encode(['error' => 'Not Found']);
         }
-
-        $this->lastResponseTime = (microtime(true) - $start) * 1000;
-        header("X-Response-Time: " . number_format($this->lastResponseTime, 2) . "ms");
-    }
-
-    public function getLastResponseTime(): float
-    {
-        return $this->lastResponseTime;
     }
 
     private function handleCors(): void

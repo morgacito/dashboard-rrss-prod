@@ -56,35 +56,9 @@ $router->post('/api/upload', function() use ($db) {
     $controller->upload();
 });
 
-// Registro de performance para diagnóstico
-$responseTime = $router->getLastResponseTime();
-$dbConnTime = $db->getConnectionTime();
-$dbQueryTime = $db->getTotalQueryTime();
-
-header("X-DB-Conn-Time: " . number_format($dbConnTime, 2) . "ms");
-header("X-DB-Query-Time: " . number_format($dbQueryTime, 2) . "ms");
-
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 $router->dispatch($uri, $method);
-
-$path = parse_url($uri)['path'] ?? '/';
-if (str_starts_with($path, '/api/')) {
-    $logDir = __DIR__ . '/data';
-    if (!is_dir($logDir)) {
-        mkdir($logDir, 0777, true);
-    }
-    $logEntry = sprintf(
-        "[%s] %s %s - Total: %.2fms, DB Conn: %.2fms, DB Query: %.2fms\n",
-        date('Y-m-d H:i:s'),
-        $method,
-        $path,
-        $responseTime,
-        $dbConnTime,
-        $dbQueryTime
-    );
-    file_put_contents($logDir . '/performance.log', $logEntry, FILE_APPEND);
-}
 
 ob_end_flush();

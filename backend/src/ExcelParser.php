@@ -37,7 +37,10 @@ class ExcelParser
         }
 
         try {
-            $spreadsheet = IOFactory::load($filePath);
+            $reader = IOFactory::createReaderForFile($filePath);
+            $reader->setReadDataOnly(true);
+            $reader->setLoadSheetsOnly(['Perfiles Organico', 'Perfiles Pagos']);
+            $spreadsheet = $reader->load($filePath);
         } catch (Exception $e) {
             throw new InvalidArgumentException("Failed to read Excel file: " . $e->getMessage());
         }
@@ -58,7 +61,7 @@ class ExcelParser
         try {
             $connection->beginTransaction();
 
-            $startDb = microtime(true);
+
             $connection->exec('DELETE FROM organic_campaign');
             $connection->exec('DELETE FROM paid_campaign');
 
@@ -88,10 +91,7 @@ class ExcelParser
 
             $connection->commit();
             
-            $duration = (microtime(true) - $startDb) * 1000;
-            if (method_exists($this->db, 'addQueryTime')) {
-                $this->db->addQueryTime($duration);
-            }
+
             
             return true;
         } catch (Exception $e) {
